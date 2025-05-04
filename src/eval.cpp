@@ -21,6 +21,14 @@ Score EvaluateMaterial(Board &board, PieceType pieceType, Color color, int &phas
 	return score;
 }
 
+Score KingLineDanger(Board &board, Color color){
+	Score eval = 0;
+	Bitboard safeline = Bitboard(color == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8);
+	int count = (~safeline & attacks::queen(board.kingSq(color), board.us(color) | board.pieces(PieceType::PAWN)  )  ).count();
+	eval += kingLineDanger[count];
+	return eval;
+}
+
 int Evaluate(Board &board, Color color){
 	int phase = 0;
 	Score eval = 0;
@@ -32,6 +40,9 @@ int Evaluate(Board &board, Color color){
 	eval += EvaluateMaterial(board, PieceType::ROOK, Color::WHITE, phase)   - EvaluateMaterial(board, PieceType::ROOK, Color::BLACK, phase);
 	eval += EvaluateMaterial(board, PieceType::QUEEN, Color::WHITE, phase)  - EvaluateMaterial(board, PieceType::QUEEN, Color::BLACK, phase);
 	eval += EvaluateMaterial(board, PieceType::KING, Color::WHITE, phase)   - EvaluateMaterial(board, PieceType::KING, Color::BLACK, phase);
+
+	// King Ling Danger
+	eval += KingLineDanger(board, Color::WHITE) - KingLineDanger(board, Color::BLACK);
 
 	Score phaseValue = (phase * 256 + 12) / 24;
 	int score = (MgScore(eval) * phaseValue + (EgScore(eval) * (256 - phaseValue))) / 256;

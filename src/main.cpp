@@ -60,7 +60,7 @@ class Perft {
 
    private:
     Board board_;
-};
+}; 
 
 // Thanks Weiss
 void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
@@ -68,15 +68,16 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     // Read in relevant search constraints
     int64_t mtime = 0;
     int64_t ctime = 0;
-    int64_t depth = 32;
+    int64_t depth = 0;
 
     SetLimit(str, "movetime",  &mtime); 
     SetLimit(str, "depth",     &depth);
 
-    if (mtime == 0 && depth == 0)
+    if (mtime == 0 && depth == 0){
         SetLimit(str, color == Color::WHITE ? "wtime" : "btime", &ctime);    
+    }
     
-    limit.ctime = ctime;
+    limit.ctime = ctime;  
     limit.movetime = mtime;
     limit.depth = depth;
 
@@ -130,6 +131,13 @@ void UCISetOption(Searcher &searcher, char *str) {
         searcher.initialize(atoi(OptionValue(str)));
     }
 }
+void UCIInfo(){
+    std::cout << "id name Tarnished\n";
+    std::cout << "id author Anik Patel\n";
+    std::cout << "option name Hash type spin default 16 min 2 max 65536\n";
+    std::cout << "option name Threads type spins default 1 min 1 max 256\n";
+    std::cout << "uciok" << std::endl; 
+}
 
 void UCIGo(Searcher &searcher, Board &board, char *str){
     searcher.stop();
@@ -138,7 +146,7 @@ void UCIGo(Searcher &searcher, Board &board, char *str){
     ParseTimeControl(str, board.sideToMove(), limit);
 
     searcher.start(board, limit);
-    searcher.stop();
+    //searcher.stop();
 }   
 
 int main(){
@@ -148,16 +156,16 @@ int main(){
     searcher.initialize(1); // Default one thread
 
     char str[INPUT_SIZE];
-    while (GetInput(str)) {
+    while (GetInput(str)) { 
         switch (HashInput(str)) {
-            case GO         : UCIGo(searcher, board, str);        break;
-            //case UCI        : UCIInfo();                  break;
-            //case ISREADY    : UCIIsReady(&engine);        break;
+            case GO         : UCIGo(searcher, board, str); break;
+            case UCI        : UCIInfo();                   break;
+            case ISREADY    : std::cout << "readyok" << std::endl;        break;
             case POSITION   : UCIPosition(board, str); std::cout << board << std::endl;      break;
             case SETOPTION  : UCISetOption(searcher, str); break;
             case UCINEWGAME : searcher.reset();            break;
-            //case STOP       : UCIStop(&engine);           break;
-            //case QUIT       : UCIStop(&engine);           return 0;
+            case STOP       : searcher.stop();             break;
+            case QUIT       : searcher.stop();             return 0;
         }
     }
 

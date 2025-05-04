@@ -91,9 +91,11 @@ struct Limit {
 			}
 			else {
 				movetime = ctime;
-				movetime /= 20;
+				movetime /= 20;	
 			}
 		}
+		if (depth == 0)
+			depth = 32;
 		timer.start();
 	}
 	bool outOfTime(){

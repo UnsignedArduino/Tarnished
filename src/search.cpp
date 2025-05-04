@@ -182,7 +182,9 @@ namespace Search {
 
 			// Reporting
 			uint64_t nodecnt = (*searcher).nodeCount();
-			std::cout << "info depth " << depth << " score cp " << score << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
+			threadInfo.board.makeMove(lastPV.moves[0]);
+			std::cout << "info depth " << depth << " score cp " << Evaluate(threadInfo.board, ~threadInfo.board.sideToMove()) << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
+			threadInfo.board.unmakeMove(lastPV.moves[0]);
 			for (int i=0;i<lastPV.length;i++)
 				std::cout << lastPV.moves[i] << " ";
 			std::cout << std::endl;

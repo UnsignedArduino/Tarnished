@@ -42,6 +42,7 @@ int Evaluate(Board &board, Color color){
 	eval += EvaluateMaterial(board, PieceType::KING, Color::WHITE, phase)   - EvaluateMaterial(board, PieceType::KING, Color::BLACK, phase);
 
 	// King Ling Danger
+	// Elo difference: 102.4 +/- 28.6
 	eval += KingLineDanger(board, Color::WHITE) - KingLineDanger(board, Color::BLACK);
 
 	Score phaseValue = (phase * 256 + 12) / 24;

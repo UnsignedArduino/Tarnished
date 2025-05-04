@@ -73,6 +73,14 @@ namespace Search {
 			return qsearch(ply, alpha, beta, ss, thread, limit);
 		}
 
+		// Terminal Conditions (and checkmate)
+		// Elo difference: 90.8 +/- 24.8
+		if (!root){
+			if (thread.board.isRepetition(1) || thread.board.isHalfMoveDraw())
+				return 0;
+		}
+
+
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
 		bool ttHit = ttEntry->zobrist == thread.board.hash();
 		if (!isPV && ttHit && ttEntry->depth >= depth
@@ -86,6 +94,7 @@ namespace Search {
 		int bestScore = -INFINITE;
 		int score = bestScore;
 		int moveCount = 0;
+		bool inCheck = thread.board.inCheck();
 		//int eval = Evaluate(thread.board, thread.board.sideToMove());
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
 
@@ -135,8 +144,10 @@ namespace Search {
 			}
 			
 		}
+		if (!moveCount)
+			return inCheck ? -MATE + ply : 0;
+
 		*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
-		// TODO Mate detection
 		return bestScore;
 
 	}

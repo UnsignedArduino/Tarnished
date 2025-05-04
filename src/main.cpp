@@ -109,7 +109,9 @@ void UCIPosition(Board &board, char *str) {
         board.makeMove(uci::uciToMove(board, m));
     }
     // Reset the state
-    board.setFen(board.getFen());
+    //std::cout << "Repeat " << board.isRepetition(1) << std::endl;
+    //board.setFen(board.getFen());
+
 }
 
 static int HashInput(char *str) {

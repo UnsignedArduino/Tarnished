@@ -1,0 +1,57 @@
+#pragma once
+
+#include <string.h>
+
+// Yoinked from Weiss
+// https://github.com/TerjeKir/weiss/blob/v1.0/src/uci.h
+
+#define INPUT_SIZE 8192
+
+enum InputCommands {
+    // UCI
+    GO          = 11,
+    UCI         = 127,
+    STOP        = 28,
+    QUIT        = 29,
+    ISREADY     = 113,
+    POSITION    = 17,
+    SETOPTION   = 96,
+    UCINEWGAME  = 6,
+    // Non-UCI
+    EVAL        = 26,
+    PRINT       = 112,
+    PERFT       = 116,
+    MIRRORTEST  = 4
+};
+
+bool GetInput(char *str) {
+    memset(str, 0, INPUT_SIZE);
+    if (fgets(str, INPUT_SIZE, stdin) == NULL)
+        return false;
+
+    str[strcspn(str, "\r\n")] = '\0';
+
+    return true;
+}
+
+bool BeginsWith(const char *str, const char *token) {
+    return strstr(str, token) == str;
+}
+
+// Tests whether the name in the setoption string matches
+bool OptionName(const char *str, const char *name) {
+    return BeginsWith(strstr(str, "name") + 5, name);
+}
+
+// Returns the (string) value of a setoption string
+char *OptionValue(const char *str) {
+    return strstr(str, "value") + 6;
+}
+
+// Sets a limit to the corresponding value in line, if any
+void SetLimit(const char *str, const char *token, int64_t *limit) {
+    const char *ptr = strstr(str, token);
+    if (ptr != nullptr){
+        *limit = std::stoll(ptr + strlen(token));
+    }
+}

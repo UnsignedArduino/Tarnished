@@ -10,7 +10,7 @@
 
 using namespace chess;
 
-#define MAX_PLY 32
+#define MAX_PLY 125
 
 enum ThreadType {
     MAIN      = 1,

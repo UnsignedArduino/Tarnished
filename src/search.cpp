@@ -119,8 +119,9 @@ namespace Search {
 		eval = Evaluate(thread.board, thread.board.sideToMove());
 
 		// Reverse Futility Pruning
-		// if (depth <= 6 && !root && eval - 80 * depth >= beta && std::abs(beta) < MATE)
-		// 	return eval;
+		// Elo difference: 49.1 +/- 19.1
+		if (depth <= 6 && !root && eval - 80 * depth >= beta && std::abs(beta) < MATE)
+			return eval;
 
 	move_loop:
 		Move bestMove = Move();

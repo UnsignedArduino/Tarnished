@@ -13,6 +13,11 @@ using namespace chess;
 
 
 namespace Search {
+	int16_t MVVLVA(Move &move, ThreadInfo &thread){
+		int v = PIECE_VALUES[thread.board.at<PieceType>(move.to())];
+		int a = PIECE_VALUES[thread.board.at<PieceType>(move.from())];
+		return v * 100 - a;
+	}
 	int qsearch(int ply, int alpha, const int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
 		bool isPV = alpha != beta - 1;
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
@@ -40,6 +45,16 @@ namespace Search {
 
 		Movelist moves;
 		movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, thread.board);
+
+		// Qsearch MVVLVA Sorting
+		// for (auto &move : moves){
+		// 	int16_t s = MVVLVA(move, thread);
+		// 	move.setScore(s);
+		// }
+		// std::sort(moves.begin(), moves.end(), [](Move a, Move b)
+		// 										{
+		// 											return a.score() > b.score();
+		// 										});
 		for (const auto &move : moves){
 			if (thread.abort.load(std::memory_order_relaxed))
 				return bestScore;
@@ -95,15 +110,34 @@ namespace Search {
 		int score = bestScore;
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
-		//int eval = Evaluate(thread.board, thread.board.sideToMove());
+		int eval;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
+		if (isPV || inCheck)
+			goto move_loop;
 
-		// if (depth < 6 && !root && !thread.board.inCheck() && !isPV && eval - 75 * depth >= beta)
+		// Pruning
+		eval = Evaluate(thread.board, thread.board.sideToMove());
+
+		// Reverse Futility Pruning
+		// if (depth <= 6 && !root && eval - 80 * depth >= beta && std::abs(beta) < MATE)
 		// 	return eval;
 
+	move_loop:
 		Move bestMove = Move();
 		Movelist moves;
+
 		movegen::legalmoves(moves, thread.board);
+
+		// MVVLVA Sorting
+		// Elo difference: 169.6 +/- 35.8
+		for (auto &move : moves){
+			int16_t s = MVVLVA(move, thread);
+			move.setScore(s);
+		}
+		std::sort(moves.begin(), moves.end(), [](Move a, Move b)
+												{
+													return a.score() > b.score();
+												});
 		// if (thread.type != ThreadType::MAIN){
 		// 	auto rng = std::default_random_engine {};
 		// 	std::shuffle(std::begin(moves), std::end(moves), rng);

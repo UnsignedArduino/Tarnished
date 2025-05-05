@@ -48,12 +48,12 @@ namespace Search {
 
 		// Qsearch MVVLVA Sorting
 		// for (auto &move : moves){
-		// 	int16_t s = MVVLVA(move, thread);
+		// 	int16_t s = 
 		// 	move.setScore(s);
 		// }
 		// std::sort(moves.begin(), moves.end(), [](Move a, Move b)
 		// 										{
-		// 											return a.score() > b.score();
+		// 											return MVVLVA(a, thread) > MVVLVA(b, thread);;
 		// 										});
 		for (const auto &move : moves){
 			if (thread.abort.load(std::memory_order_relaxed))
@@ -122,6 +122,16 @@ namespace Search {
 		// Elo difference: 49.1 +/- 19.1
 		if (depth <= 6 && !root && eval - 80 * depth >= beta && std::abs(beta) < MATE)
 			return eval;
+
+		// Null Move Pruning
+		// if (depth >= 3 && eval >= beta){
+		// 	thread.board.makeNullMove();
+		// 	int nmpScore = -search(depth-3, ply+1, -beta, -alpha, ss+1, thread, limit);
+		// 	thread.board.unmakeNullMove();
+		// 	if (nmpScore >= beta)
+		// 		return nmpScore;
+		// }
+
 
 	move_loop:
 		Move bestMove = Move();

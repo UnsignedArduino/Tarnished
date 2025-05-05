@@ -12,6 +12,15 @@ using namespace chess;
 
 #define MAX_PLY 125
 
+const int MVVLVA[7][7] = {
+    {15, 14, 13, 12, 11, 10, 0}, // Victim P, attacker P, N, B, R, Q, K, None
+    {25, 24, 23, 22, 21, 20, 0}, // Victim N, attacker P, N, B, R, Q, K, None
+    {35, 34, 33, 32, 31, 30, 0}, // Victim B, attacker P, N, B, R, Q, K, None
+    {45, 44, 43, 42, 41, 40, 0}, // Victim R, attacker P, N, B, R, Q, K, None
+    {55, 54, 53, 52, 51, 50, 0}, // Victim Q, attacker P, N, B, R, Q, K, None
+    {0,  0,  0,  0,  0,  0,  0}  // Victim None, attacker P, N, B, R, Q, K, None
+};
+
 enum ThreadType {
     MAIN      = 1,
     SECONDARY = 0

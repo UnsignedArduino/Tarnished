@@ -13,10 +13,23 @@ using namespace chess;
 
 
 namespace Search {
-	int16_t MVVLVA(Move &move, ThreadInfo &thread){
-		int v = PIECE_VALUES[thread.board.at<PieceType>(move.to())];
-		int a = PIECE_VALUES[thread.board.at<PieceType>(move.from())];
-		return v * 100 - a;
+	int16_t scoreMove(Move &move, Move &ttMove, ThreadInfo &thread){
+		// MVV-LVA
+		// Elo difference: 369.8 +/- 71.9 (#2)
+
+		// TT Move
+		// Elo difference: 154.8 +/- 33.8 (#4)
+		return MVVLVA[thread.board.at<PieceType>(move.to())][thread.board.at<PieceType>(move.from())] + 60 * (move == ttMove);
+	}
+	bool scoreComparator(Move &a, Move &b){
+		return a.score() > b.score();
+	}
+	void pickMove(Movelist &mvlst, int start){
+		for (int i=start+1;i<mvlst.size();i++){
+			if (mvlst[i].score() > mvlst[start].score()){
+				std::iter_swap(mvlst.begin() + start, mvlst.begin() + i);
+			}
+		}
 	}
 	int qsearch(int ply, int alpha, const int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
 		bool isPV = alpha != beta - 1;
@@ -46,22 +59,21 @@ namespace Search {
 		Movelist moves;
 		movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, thread.board);
 
-		// Qsearch MVVLVA Sorting
-		// for (auto &move : moves){
-		// 	int16_t s = 
-		// 	move.setScore(s);
-		// }
-		// std::sort(moves.begin(), moves.end(), [](Move a, Move b)
-		// 										{
-		// 											return MVVLVA(a, thread) > MVVLVA(b, thread);;
-		// 										});
-		for (const auto &move : moves){
+		// Move Scoring
+		for (auto &move : moves){
+			move.setScore(scoreMove(move, ttEntry->move, thread));
+		}
+		for (int m_ = 0;m_<moves.size();m_++){
 			if (thread.abort.load(std::memory_order_relaxed))
 				return bestScore;
 			if (limit.outOfTime()){
 				thread.abort.store(true, std::memory_order_relaxed);
 				return bestScore;
 			}
+
+			pickMove(moves, m_);
+			Move move = moves[m_];
+
 			thread.board.makeMove(move);
 			thread.nodes++;
 			score = -qsearch(ply+1, -beta, -alpha, ss+1, thread, limit);
@@ -89,7 +101,7 @@ namespace Search {
 		}
 
 		// Terminal Conditions (and checkmate)
-		// Elo difference: 90.8 +/- 24.8
+		// Elo difference: 90.8 +/- 24.8 (#1)
 		if (!root){
 			if (thread.board.isRepetition(1) || thread.board.isHalfMoveDraw())
 				return 0;
@@ -119,11 +131,12 @@ namespace Search {
 		eval = Evaluate(thread.board, thread.board.sideToMove());
 
 		// Reverse Futility Pruning
-		// Elo difference: 49.1 +/- 19.1
+		// Elo difference: 49.1 +/- 19.1 (#3)
 		if (depth <= 6 && !root && eval - 80 * depth >= beta && std::abs(beta) < MATE)
 			return eval;
 
 		// Null Move Pruning
+		// Failed
 		// if (depth >= 3 && eval >= beta){
 		// 	thread.board.makeNullMove();
 		// 	int nmpScore = -search(depth-3, ply+1, -beta, -alpha, ss+1, thread, limit);
@@ -139,27 +152,20 @@ namespace Search {
 
 		movegen::legalmoves(moves, thread.board);
 
-		// MVVLVA Sorting
-		// Elo difference: 169.6 +/- 35.8
+		// Move Scoring
 		for (auto &move : moves){
-			int16_t s = MVVLVA(move, thread);
-			move.setScore(s);
+			move.setScore(scoreMove(move, ttEntry->move, thread));
 		}
-		std::sort(moves.begin(), moves.end(), [](Move a, Move b)
-												{
-													return a.score() > b.score();
-												});
-		// if (thread.type != ThreadType::MAIN){
-		// 	auto rng = std::default_random_engine {};
-		// 	std::shuffle(std::begin(moves), std::end(moves), rng);
-		// }
-		for (const auto &move : moves){
+
+		for (int m_ = 0;m_<moves.size();m_++){
 			if (thread.abort.load(std::memory_order_relaxed))
 				return bestScore;
 			if (limit.outOfTime()){
 				thread.abort.store(true, std::memory_order_relaxed);
 				return bestScore;
 			}
+			pickMove(moves, m_);
+			Move move = moves[m_];
 
 			thread.board.makeMove<true>(move);
 			int newDepth = depth-1;
@@ -197,6 +203,36 @@ namespace Search {
 
 	}
 
+	// int aspirationWindows(){
+	// 	int delta = 8;
+	// 	int alpha = -INFINITE;
+	// 	int beta = INFINITE;
+	// 	int aspDepth = depth;
+	// 	if (depth >= 6){
+	// 		int alpha = std::max(lastScore - delta, -INFINITE);
+	// 		int beta = std::min(lastScore + delta, INFINITE);
+	// 	}
+		
+	// 	while (true){
+	// 		score = search(std::max(aspDepth, 1), 0, alpha, beta, ss, threadInfo, limit);
+	// 		if (aborted())
+	// 			break;
+	// 		if (score <= alpha){
+	// 			beta = (alpha + beta) / 2;
+	// 			alpha = std::max(alpha - delta, -INFINITE);
+	// 			aspDepth = depth; // Reset Depth
+	// 		}
+	// 		else {
+	// 			if (score >= beta){
+	// 				beta = std::min(beta + delta, INFINITE);
+	// 				aspDepth = std::max(aspDepth - 1, depth - 5);
+	// 			}
+	// 			else
+	// 				break;
+	// 		}
+	// 		delta += delta * 3 / 16;
+	// 	}
+	// }
 	int iterativeDeepening(Board &board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher){
 		//limit.start();
 		threadInfo.abort.store(false);
@@ -210,17 +246,25 @@ namespace Search {
 
 		PVList lastPV{};
 		int score = -INFINITE;
+		int lastScore = -INFINITE;
 
 		for (int depth=1;depth<=limit.depth;depth++){
-			score = search(depth, 0, -INFINITE, INFINITE, ss, threadInfo, limit);
+			
 			auto aborted = [&]() {
 				if (isMain)
 					return limit.outOfTime() || threadInfo.abort.load(std::memory_order_relaxed);
 				else
 					return threadInfo.abort.load(std::memory_order_relaxed);
 			};
+			// Aspiration Windows 
+			score = search(depth, 0, -INFINITE, INFINITE, ss, threadInfo, limit);
+			// ---------------------
+			
 			if (depth != 1 && aborted())
 				break;
+
+			lastScore = score;
+
 			if (!isMain)
 				continue;
 			lastPV = ss->pv;

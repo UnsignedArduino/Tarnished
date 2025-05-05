@@ -10,7 +10,7 @@ You may build by cloning the repo and running `make`
 - Move Generation
     - Internally uses [chess-library](https://disservin.github.io/chess-library/)
 - Evaluation
-    - Taper Evaluation
+    - Tapered Evaluation
     - Piece Square Tables
     - Mobility Bonus
     - King Line Danger (inspired by Weiss)
@@ -21,6 +21,7 @@ You may build by cloning the repo and running `make`
     -  Transposition Table
     - Move Ordering
         - MVV-LVA
+        - TT Move
     - Selectivity
         - Reverse Futility Pruning
         - Terminal Conditions (Mate, Stalemate, 3fold...)

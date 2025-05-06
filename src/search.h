@@ -11,6 +11,7 @@
 using namespace chess;
 
 #define MAX_PLY 125
+#define BENCH_DEPTH 9
 
 const int MVVLVA[7][7] = {
     {15, 14, 13, 12, 11, 10, 0}, // Victim P, attacker P, N, B, R, Q, K, None
@@ -126,5 +127,6 @@ struct Limit {
 };
 //int search(Board &board, int depth, int ply, int alpha, int beta, Stack *ss, ThreadInfo &thread);
 //int iterativeDeepening(Board board, ThreadInfo &threadInfo, Searcher *searcher);
- 
+
+void bench();
 } 

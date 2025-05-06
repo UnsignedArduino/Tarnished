@@ -18,6 +18,7 @@ enum InputCommands {
     SETOPTION   = 96,
     UCINEWGAME  = 6,
     // Non-UCI
+    BENCH       = 99,
     EVAL        = 26,
     PRINT       = 112,
     PERFT       = 116,

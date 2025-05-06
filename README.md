@@ -28,9 +28,19 @@ You may build by cloning the repo and running `make`
         - Reverse Futility Pruning
         - Null Move Pruning
         - Late Move Reductions
+        - Late Move Pruning
         - Terminal Conditions (Mate, Stalemate, 3fold...)
  - Misc
      - Lazy SMP (not tested thoroughly)
+
+## Non-standard UCI Commands
+
+- `print`
+    - Prints out the board, side to move, castling rights, Zobrist Hash, etc
+- `eval`
+    - Prints the current position's static evaluation for the side to move
+- `bench`
+    - Runs an OpenBench style benchmark on 50 positions. Alternatively run `./tarnished bench`
 
 ## Credits
 - Stockfish Discord Server

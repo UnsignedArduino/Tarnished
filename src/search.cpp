@@ -167,14 +167,14 @@ namespace Search {
 			return eval;
 
 		// Null Move Pruning
-		// Failed
-		// if (depth >= 3 && eval >= beta){
-		// 	thread.board.makeNullMove();
-		// 	int nmpScore = -search(depth-3, ply+1, -beta, -alpha, ss+1, thread, limit);
-		// 	thread.board.unmakeNullMove();
-		// 	if (nmpScore >= beta)
-		// 		return nmpScore;
-		// }
+		// Elo difference: 100.7 +/- 26.1
+		if (depth >= 3 && eval >= beta){
+			thread.board.makeNullMove();
+			int nmpScore = -search<false>(depth-3, ply+1, -beta, -alpha, ss+1, thread, limit);
+			thread.board.unmakeNullMove();
+			if (nmpScore >= beta)
+				return nmpScore;
+		}
 
 
 	move_loop:

@@ -26,6 +26,7 @@ You may build by cloning the repo and running `make`
         - Butterfly History Heuristic
     - Selectivity
         - Reverse Futility Pruning
+        - Null Move Pruning
         - Terminal Conditions (Mate, Stalemate, 3fold...)
  - Misc
      - Lazy SMP (not tested thoroughly)

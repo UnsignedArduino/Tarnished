@@ -36,20 +36,33 @@ struct ThreadInfo {
 	std::atomic<bool> &abort;
 	Board board;
 	std::atomic<uint64_t> nodes;
-	uint64_t ttHits;
+
+	std::array<std::array<std::array<int, 64>, 64>, 2> history;
+	//uint64_t ttHits;
 
 	ThreadInfo(ThreadType type, TTable &TT, std::atomic<bool> &abort) : type(type), TT(TT), abort(abort) {
 		abort.store(false, std::memory_order_relaxed);
 		this->board = Board();
+		std::memset(&history, 0, sizeof(history));
 		nodes = 0;
-		ttHits = 0;
+		//ttHits = 0;
 	}
-	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), ttHits(other.ttHits) {
+	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history) {
 		this->board = other.board;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}
+	void updateHistory(Color c, Move m, int bonus){
+		int clamped = std::clamp(bonus, -16384, 16384);
+		history[(int)c][m.from().index()][m.to().index()] += clamped - history[(int)c][m.from().index()][m.to().index()] * std::abs(clamped) / 16384;
+	}
+	int getHistory(Color c, Move m){
+		return history[(int)c][m.from().index()][m.to().index()];
+	}
 	void reset(){
 		nodes.store(0, std::memory_order_relaxed);
+		for (auto &i : history)
+			for (auto &j : i)
+				j.fill(0);
 	}
 };
 
@@ -73,7 +86,7 @@ struct PVList {
 
 struct Stack {
     PVList pv;
-    chess::Move   excluded;
+    chess::Move killer;
     int    staticEval;
 };
 

@@ -137,7 +137,7 @@ void UCIInfo(){
     std::cout << "id name Tarnished\n";
     std::cout << "id author Anik Patel\n";
     std::cout << "option name Hash type spin default 16 min 2 max 65536\n";
-    std::cout << "option name Threads type spins default 1 min 1 max 256\n";
+    std::cout << "option name Threads type spin default 1 min 1 max 256\n";
     std::cout << "uciok" << std::endl; 
 }
 

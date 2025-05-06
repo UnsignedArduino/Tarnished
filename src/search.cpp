@@ -13,13 +13,37 @@ using namespace chess;
 
 
 namespace Search {
-	int16_t scoreMove(Move &move, Move &ttMove, ThreadInfo &thread){
+	int16_t scoreMove(Move &move, Move &ttMove, Move &killer, ThreadInfo &thread){
 		// MVV-LVA
 		// Elo difference: 369.8 +/- 71.9 (#2)
 
 		// TT Move
 		// Elo difference: 154.8 +/- 33.8 (#4)
-		return MVVLVA[thread.board.at<PieceType>(move.to())][thread.board.at<PieceType>(move.from())] + 60 * (move == ttMove);
+
+		// Killer Move Heuristic
+		// Elo difference: 38.8 +/- 15.4 (#5)
+
+		// Butterfly History Heuristic
+		// Elo difference: 85.8 +/- 23.8 (#6)
+
+		PieceType to = thread.board.at<PieceType>(move.to());
+		if (move == ttMove){
+			return 32511 + 60;
+		}
+		else if (to != PieceType::NONE) {
+			// Max 16 bit int - 256 + MVVLVA
+			// https://rustic-chess.org/search/ordering/killers.html
+			return 32511 + MVVLVA[to][thread.board.at<PieceType>(move.from())];
+		}
+		else if (move == killer){
+			return 32511 - 10;
+		}
+		else {
+			// Quiet non killer
+			// Butterfly
+			return 32511 - 16384 + thread.getHistory(thread.board.sideToMove(), move);
+		}
+		return 0;
 	}
 	bool scoreComparator(Move &a, Move &b){
 		return a.score() > b.score();
@@ -31,8 +55,9 @@ namespace Search {
 			}
 		}
 	}
+	template<bool isPV>
 	int qsearch(int ply, int alpha, const int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
-		bool isPV = alpha != beta - 1;
+		//bool isPV = alpha != beta - 1;
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
 		bool ttHit = ttEntry->zobrist == thread.board.hash();
 		if (!isPV && ttHit
@@ -61,7 +86,9 @@ namespace Search {
 
 		// Move Scoring
 		for (auto &move : moves){
-			move.setScore(scoreMove(move, ttEntry->move, thread));
+			// Qsearch doesnt have killers
+			// Still pass to make compiler happy
+			move.setScore(scoreMove(move, ttEntry->move, ss->killer, thread));
 		}
 		for (int m_ = 0;m_<moves.size();m_++){
 			if (thread.abort.load(std::memory_order_relaxed))
@@ -76,13 +103,16 @@ namespace Search {
 
 			thread.board.makeMove(move);
 			thread.nodes++;
-			score = -qsearch(ply+1, -beta, -alpha, ss+1, thread, limit);
+			score = -qsearch<isPV>(ply+1, -beta, -alpha, ss+1, thread, limit);
 			thread.board.unmakeMove(move);
 
 			if (score > bestScore){
 				bestScore = score;
-				if (score > alpha)
+				if (score > alpha){
 					alpha = score;
+					// if (isPV)
+					// 	ss->pv.update(move, (ss+1)->pv);
+				}
 			}
 			if (score >= beta){
 				break;
@@ -91,13 +121,14 @@ namespace Search {
 		return bestScore;
 
 	}
+	template<bool isPV>
 	int search(int depth, int ply, int alpha, int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
-		bool isPV = alpha != beta - 1;
+		//bool isPV = alpha != beta - 1;
 		bool root = ply == 0;
 		if (isPV) 
 			ss->pv.length = 0;
 		if (depth <= 0){
-			return qsearch(ply, alpha, beta, ss, thread, limit);
+			return qsearch<isPV>(ply, alpha, beta, ss, thread, limit);
 		}
 
 		// Terminal Conditions (and checkmate)
@@ -149,12 +180,13 @@ namespace Search {
 	move_loop:
 		Move bestMove = Move();
 		Movelist moves;
+		Movelist seenQuiets;
 
 		movegen::legalmoves(moves, thread.board);
 
 		// Move Scoring
 		for (auto &move : moves){
-			move.setScore(scoreMove(move, ttEntry->move, thread));
+			move.setScore(scoreMove(move, ttEntry->move, ss->killer, thread));
 		}
 
 		for (int m_ = 0;m_<moves.size();m_++){
@@ -166,16 +198,22 @@ namespace Search {
 			}
 			pickMove(moves, m_);
 			Move move = moves[m_];
+			bool isQuiet = thread.board.at<PieceType>(move.to()) == PieceType::NONE;
+
+			if (isQuiet)
+				seenQuiets.add(move);
 
 			thread.board.makeMove<true>(move);
 			int newDepth = depth-1;
 			moveCount++;
 			thread.nodes++;
+			// if (root)
+			// 	printf("Score %d BestScore %d Alpha %d Beta %d PV LENGTH %d\n", score, bestScore, alpha, beta, ss->pv.length);
 			if (!isPV || moveCount > 1){
-				score = -search(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+				score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 			}
 			if (isPV && (moveCount == 1 || score > alpha)){
-				score = -search(newDepth, ply+1, -beta, -alpha, ss+1, thread, limit);
+				score = -search<isPV>(newDepth, ply+1, -beta, -alpha, ss+1, thread, limit);
 			}
 			thread.board.unmakeMove(move);
 			if (score > bestScore){
@@ -191,6 +229,16 @@ namespace Search {
 			}
 			if (score >= beta){
 				ttFlag = TTFlag::BETA_CUT;
+				ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
+				// Butterfly History
+				if (isQuiet){
+					thread.updateHistory(thread.board.sideToMove(), move, 20 * depth * depth);
+				}
+				for (const Move quietMove : seenQuiets){
+					if (quietMove == move)
+						continue;
+					thread.updateHistory(thread.board.sideToMove(), quietMove, -20 * depth * depth);
+				}
 				break;
 			}
 			
@@ -203,36 +251,6 @@ namespace Search {
 
 	}
 
-	// int aspirationWindows(){
-	// 	int delta = 8;
-	// 	int alpha = -INFINITE;
-	// 	int beta = INFINITE;
-	// 	int aspDepth = depth;
-	// 	if (depth >= 6){
-	// 		int alpha = std::max(lastScore - delta, -INFINITE);
-	// 		int beta = std::min(lastScore + delta, INFINITE);
-	// 	}
-		
-	// 	while (true){
-	// 		score = search(std::max(aspDepth, 1), 0, alpha, beta, ss, threadInfo, limit);
-	// 		if (aborted())
-	// 			break;
-	// 		if (score <= alpha){
-	// 			beta = (alpha + beta) / 2;
-	// 			alpha = std::max(alpha - delta, -INFINITE);
-	// 			aspDepth = depth; // Reset Depth
-	// 		}
-	// 		else {
-	// 			if (score >= beta){
-	// 				beta = std::min(beta + delta, INFINITE);
-	// 				aspDepth = std::max(aspDepth - 1, depth - 5);
-	// 			}
-	// 			else
-	// 				break;
-	// 		}
-	// 		delta += delta * 3 / 16;
-	// 	}
-	// }
 	int iterativeDeepening(Board &board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher){
 		//limit.start();
 		threadInfo.abort.store(false);
@@ -256,8 +274,23 @@ namespace Search {
 				else
 					return threadInfo.abort.load(std::memory_order_relaxed);
 			};
-			// Aspiration Windows 
-			score = search(depth, 0, -INFINITE, INFINITE, ss, threadInfo, limit);
+			// Aspiration Windows (WIP)
+			if (false){
+				// int delta = 12; // 12 probably gains
+				// int alpha  = std::max(lastScore - delta, -INFINITE);
+				// int beta = std::max(lastScore + delta, INFINITE);
+				// while (!aborted()){
+				// 	score = search<true>(depth, 0, alpha, beta, ss, threadInfo, limit);
+				// 	if (score <= alpha || score >= beta) {
+				// 		alpha = -INFINITE;
+				// 		beta = INFINITE;
+				// 	}
+				// 	else
+				// 		break;
+				// }
+			}
+			else
+				score = search<true>(depth, 0, -INFINITE, INFINITE, ss, threadInfo, limit);
 			// ---------------------
 			
 			if (depth != 1 && aborted())

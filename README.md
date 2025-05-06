@@ -18,10 +18,12 @@ You may build by cloning the repo and running `make`
     - Principle Variation Search
     - Quiescence Search
     - Iterative Deepening
-    -  Transposition Table
+    - Shared Transposition Table
     - Move Ordering
         - MVV-LVA
         - TT Move
+        - Killer Move Heuristic 
+        - Butterfly History Heuristic
     - Selectivity
         - Reverse Futility Pruning
         - Terminal Conditions (Mate, Stalemate, 3fold...)

@@ -10,7 +10,8 @@ UCI Chess Engine written in C++ - the name is a reference to a certain video gam
 4. `cmake --build .`
 5. Binary is at `build/tarnished.exe`
 
-The [`Makefile`](Makefile) is used for OpenBench.
+The [`Makefile`](Makefile) can also be used to build the engine. Just run `make` in the root directory. It is also used 
+by OpenBench.
 
 ## Features
 

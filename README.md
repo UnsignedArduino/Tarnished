@@ -8,7 +8,9 @@ UCI Chess Engine written in C++ - the name is a reference to a certain video gam
 2. `mkdir build && cd build`
 3. `cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release`
 4. `cmake --build .`
-5. Binary is at `build/Tarnished.exe`
+5. Binary is at `build/tarnished.exe`
+
+The [`Makefile`](Makefile) is used for OpenBench.
 
 ## Features
 

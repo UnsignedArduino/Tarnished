@@ -11,6 +11,6 @@ endif
 $(EXE):
 	-mkdir build
 	cd build
-	cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release
+	cmake .. -DCMAKE_BUILD_TYPE=Release
 	cmake --build .
 	cmake -E rename tarnished$(EXE_SUFFIX) ../$(EXE)$(EXE_SUFFIX)

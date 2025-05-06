@@ -1,0 +1,16 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.29)
+PROJECT("Tarnished")
+
+SET(CMAKE_CXX_STANDARD 20)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+# SET(CMAKE_CXX_FLAGS "-static -static-libgcc -static-libstdc++")
+
+set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
+
+# Main executable
+FILE(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "${SRC_DIR}/*.cpp" "${SRC_DIR}/*.h" "${SRC_DIR}/*.hpp")
+add_executable(${PROJECT_NAME} ${SOURCES})
+target_include_directories(${PROJECT_NAME} PRIVATE ${SRC_DIR})
+
+LIST(LENGTH SOURCES SOURCES_LENGTH)
+MESSAGE(STATUS "${SOURCES_LENGTH} files in target ${PROJECT_NAME}")

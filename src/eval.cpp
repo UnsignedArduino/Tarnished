@@ -30,8 +30,13 @@ Score EvaluatePiece(Board &board, PieceType pieceType, Bitboard area, Color colo
 				movement = attacks::knight(sq);
 
 			int mob = (movement & area).count();
-			score += mobilityBonus[(int)pieceType-1][mob];
 
+			// Also consider king saftey a little
+			// Elo difference: 48.8 +/- 17.9
+			int kingThreats = (movement & attacks::king(board.kingSq(~color))).count();
+
+			score += mobilityBonus[(int)pieceType-1][mob];
+			score += kingAttacks[(int)pieceType-1] * kingThreats;
 		}
 
 
@@ -42,7 +47,7 @@ Score EvaluatePiece(Board &board, PieceType pieceType, Bitboard area, Color colo
 	return score;
 }
 
-Score KingLineDanger(Board &board, Color color){
+Score KingDanger(Board &board, Color color){
 	Score score = 0;
 	Bitboard safeline = Bitboard(color == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8);
 	int count = (~safeline & attacks::queen(board.kingSq(color), board.us(color) | board.pieces(PieceType::PAWN)  )  ).count();
@@ -69,11 +74,14 @@ int Evaluate(Board &board, Color color){
 	eval += EvaluatePiece(board, PieceType::QUEEN, mobilityArea[0], Color::WHITE, phase)  - EvaluatePiece(board, PieceType::QUEEN, mobilityArea[1], Color::BLACK, phase);
 	eval += EvaluatePiece(board, PieceType::KING, mobilityArea[0], Color::WHITE, phase)   - EvaluatePiece(board, PieceType::KING, mobilityArea[1], Color::BLACK, phase);
 
-	// King Ling Danger
-	// Elo difference: 102.4 +/- 28.6
-	eval += KingLineDanger(board, Color::WHITE) - KingLineDanger(board, Color::BLACK);
+	// King Line Danger
+	eval += KingDanger(board, Color::WHITE) - KingDanger(board, Color::BLACK);
+
+	// Bishop pair Bonus
+	eval += board.pieces(PieceType::BISHOP, Color::WHITE).count() >= 2 ? bishopPair : 0;
+	eval -= board.pieces(PieceType::BISHOP, Color::BLACK).count() >= 2 ? bishopPair : 0;
 
 	Score phaseValue = (phase * 256 + 12) / 24;
 	int score = (MgScore(eval) * phaseValue + (EgScore(eval) * (256 - phaseValue))) / 256;
-	return (color == Color::WHITE ? score : -score);
+	return (color == Color::WHITE ? score : -score) + 18; // Tempo Bonus
 }

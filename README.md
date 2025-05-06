@@ -14,6 +14,9 @@ You may build by cloning the repo and running `make`
     - Piece Square Tables
     - Mobility Bonus
     - King Line Danger (inspired by Weiss)
+    - King Threats
+    - Bishop Pair
+    - Tempo Bonus
 - Search
     - Principle Variation Search
     - Quiescence Search

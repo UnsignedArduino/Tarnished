@@ -27,6 +27,7 @@ You may build by cloning the repo and running `make`
     - Selectivity
         - Reverse Futility Pruning
         - Null Move Pruning
+        - Late Move Reductions
         - Terminal Conditions (Mate, Stalemate, 3fold...)
  - Misc
      - Lazy SMP (not tested thoroughly)

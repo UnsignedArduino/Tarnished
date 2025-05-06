@@ -167,7 +167,7 @@ namespace Search {
 			return eval;
 
 		// Null Move Pruning
-		// Elo difference: 100.7 +/- 26.1
+		// Elo difference: 100.7 +/- 26.1 (#7)
 		if (depth >= 3 && eval >= beta){
 			thread.board.makeNullMove();
 			int nmpScore = -search<false>(depth-3, ply+1, -beta, -alpha, ss+1, thread, limit);
@@ -207,9 +207,16 @@ namespace Search {
 			int newDepth = depth-1;
 			moveCount++;
 			thread.nodes++;
-			// if (root)
-			// 	printf("Score %d BestScore %d Alpha %d Beta %d PV LENGTH %d\n", score, bestScore, alpha, beta, ss->pv.length);
-			if (!isPV || moveCount > 1){
+
+			// Late Move Reduction
+			// Elo difference: 62.0 +/- 19.9 (#8)
+			if (depth > 2 && moveCount > 2 && isQuiet && !thread.board.inCheck()){
+				score = -search<false>(newDepth-1, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+				// Re-search at normal depth
+				if (score > alpha)
+					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+			}
+			else if (!isPV || moveCount > 1){
 				score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 			}
 			if (isPV && (moveCount == 1 || score > alpha)){

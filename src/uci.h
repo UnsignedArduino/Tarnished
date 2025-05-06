@@ -46,7 +46,8 @@ bool OptionName(const char *str, const char *name) {
 
 // Returns the (string) value of a setoption string
 char *OptionValue(const char *str) {
-    return strstr(str, "value") + 6;
+    const char *valuePtr = strstr(str, "value");
+    return (valuePtr != nullptr && strlen(valuePtr) > 6) ? (char *)(valuePtr + 6) : nullptr;
 }
 
 // Sets a limit to the corresponding value in line, if any

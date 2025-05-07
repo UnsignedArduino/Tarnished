@@ -9,7 +9,7 @@ As of right now, all tests have been conducted on my personal PC with the use of
 HCE evaluation values were taken from my microcontroller chess engine [MemorixV2](https://github.com/Bobingstern/MemorixV2) which were computed via [Texel-Tuning](https://github.com/AndyGrant/Ethereal/blob/master/Tuning.pdf)
 
 ## Strength
-So far, Tarnished can defeat [Stash-19.0](https://gitlab.com/mhouppin/stash-bot) at `8+0.08` and `40+0.4` time controls which is estimated ~2471 CCRL Blitz. These are the results after ~900 games on an `Intel(R) Core(TM) i7-10700F`
+So far, Tarnished can defeat [Stash-19.0](https://gitlab.com/mhouppin/stash-bot) at `8+0.08` and `40+0.4` time controls which is estimated ~2471 CCRL Blitz. These are the results on an `Intel(R) Core(TM) i7-10700F`
 
 `Engine | tarnished vs stash-19.0`
 

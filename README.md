@@ -1,5 +1,4 @@
 
-
 # Tarnished
 UCI Chess Engine written in C++
 
@@ -21,8 +20,8 @@ Games  | N: 995 W: 462 L: 363 D: 171 [0.550]
 ```
 ```
 TC     | 40+0.4
-Elo    | 35.0 +- 19.7
-Games  | N: 995 W: 462 L: 363 D: 171 [0.550]
+Elo    | 17.1 +- 13.8
+Games  | N: 1950 W: 830 L: 734 D: 386 [0.525]
 ``` 
 
 ## Usage
@@ -31,7 +30,7 @@ It seems like the `Makefile` is slightly faster than using `CMake` but you may u
 2. `make`
 3. Binary is at `tarnished.exe`
 
-Alternatively with `CMake`,
+Alternatively,
 
 1. Clone the repository.
 2. `mkdir build && cd build`

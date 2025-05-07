@@ -1,9 +1,17 @@
 # Tarnished
-UCI Chess Engine written in C++
-The name is a reference to a certain video game protagonist
+
+UCI Chess Engine written in C++ - the name is a reference to a certain video game protagonist.
 
 ## Usage
-You may build by cloning the repo and running `make`
+
+1. Clone the repository.
+2. `mkdir build && cd build`
+3. `cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release`
+4. `cmake --build .`
+5. Binary is at `build/tarnished.exe`
+
+The [`Makefile`](Makefile) can also be used to build the engine. Just run `make` in the root directory. It is also used 
+by OpenBench.
 
 ## Features
 
@@ -46,6 +54,7 @@ You may build by cloning the repo and running `make`
     - Runs an OpenBench style benchmark on 50 positions. Alternatively run `./tarnished bench`
 
 ## Credits
+
 - Stockfish Discord Server
 - [Weiss](https://github.com/TerjeKir/Weiss)
 - [Stash](https://github.com/mhouppin/stash-bot)

@@ -15,16 +15,9 @@ using namespace chess;
 namespace Search {
 	int16_t scoreMove(Move &move, Move &ttMove, Move &killer, ThreadInfo &thread){
 		// MVV-LVA
-		// Elo difference: 369.8 +/- 71.9 (#2)
-
 		// TT Move
-		// Elo difference: 154.8 +/- 33.8 (#4)
-
 		// Killer Move Heuristic
-		// Elo difference: 38.8 +/- 15.4 (#5)
-
 		// Butterfly History Heuristic
-		// Elo difference: 85.8 +/- 23.8 (#6)
 
 		PieceType to = thread.board.at<PieceType>(move.to());
 		if (move == ttMove){
@@ -132,7 +125,6 @@ namespace Search {
 		}
 
 		// Terminal Conditions (and checkmate)
-		// Elo difference: 90.8 +/- 24.8 (#1)
 		if (!root){
 			if (thread.board.isRepetition(1) || thread.board.isHalfMoveDraw())
 				return 0;
@@ -162,12 +154,10 @@ namespace Search {
 		eval = Evaluate(thread.board, thread.board.sideToMove());
 
 		// Reverse Futility Pruning
-		// Elo difference: 49.1 +/- 19.1 (#3)
 		if (depth <= 6 && !root && eval - 80 * depth >= beta && std::abs(beta) < MATE)
 			return eval;
 
 		// Null Move Pruning
-		// Elo difference: 100.7 +/- 26.1 (#7)
 		if (depth >= 3 && eval >= beta){
 			thread.board.makeNullMove();
 			int nmpScore = -search<false>(depth-3, ply+1, -beta, -alpha, ss+1, thread, limit);
@@ -210,7 +200,6 @@ namespace Search {
 			
 			if (bestScore > -INFINITE + MAX_PLY){
 				// Late Move Pruning
-				// Elo difference: 46.4 +/- 17.0 (#9)
 				if (!skipQuiets && isQuiet && moveCount >= 6 * depth * depth){
 					skipQuiets = true;
 					continue;
@@ -223,7 +212,6 @@ namespace Search {
 			thread.nodes++;
 
 			// Late Move Reduction
-			// Elo difference: 62.0 +/- 19.9 (#8)
 			if (depth > 2 && moveCount > 2 && isQuiet && !thread.board.inCheck()){
 				score = -search<false>(newDepth-1, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth

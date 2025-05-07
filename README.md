@@ -4,7 +4,7 @@ UCI Chess Engine written in C++
 
 The name is a reference to a certain video game protagonist
 
-As of right now, all tests have been conducted on my personal PC with the use of [cutechess-cli](https://github.com/cutechess/cutechess/tree/master) but will eventually migrate [OpenBench](https://github.com/AndyGrant/OpenBench)
+As of right now, all tests have been conducted on my personal PC with the use of [cutechess-cli](https://github.com/cutechess/cutechess/tree/master) but will eventually migrate to [OpenBench](https://github.com/AndyGrant/OpenBench)
 
 HCE evaluation values were taken from my microcontroller chess engine [MemorixV2](https://github.com/Bobingstern/MemorixV2) which were computed via [Texel-Tuning](https://github.com/AndyGrant/Ethereal/blob/master/Tuning.pdf)
 

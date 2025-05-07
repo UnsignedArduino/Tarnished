@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# Build products
+build
+cmake-build-*
+
+# Other stuff
+*.epd
+*.pgn
+*.book

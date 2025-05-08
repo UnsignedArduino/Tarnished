@@ -98,12 +98,14 @@ struct Limit {
 	int64_t depth;
 	int64_t ctime;
 	int64_t movetime;
+	int64_t maxnodes;
 	Color color;
 
 	Limit(){
 		depth = 0;
 		ctime = 0;
 		movetime = 0;
+		maxnodes = -1;
 	}
 	Limit(int64_t depth, int64_t ctime, int64_t movetime, Color color) : depth(depth), ctime(ctime), movetime(movetime), color(color) {
 		
@@ -123,8 +125,11 @@ struct Limit {
 			depth = 32;
 		timer.start();
 	}
+	bool outOfNodes(int64_t cnt){
+		return maxnodes != -1 && cnt > maxnodes;
+	}
 	bool outOfTime(){
-		return static_cast<int64_t>(timer.elapsed()) >= movetime - 25;
+		return (maxnodes == -1 && static_cast<int64_t>(timer.elapsed()) >= movetime - 25);
 	}
 };
 //int search(Board &board, int depth, int ply, int alpha, int beta, Stack *ss, ThreadInfo &thread);

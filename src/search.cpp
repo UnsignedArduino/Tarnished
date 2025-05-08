@@ -88,7 +88,7 @@ namespace Search {
 		for (int m_ = 0;m_<moves.size();m_++){
 			if (thread.abort.load(std::memory_order_relaxed))
 				return bestScore;
-			if (limit.outOfTime()){
+			if (limit.outOfTime() || limit.outOfNodes(thread.nodes)){
 				thread.abort.store(true, std::memory_order_relaxed);
 				return bestScore;
 			}
@@ -188,7 +188,7 @@ namespace Search {
 		for (int m_ = 0;m_<moves.size();m_++){
 			if (thread.abort.load(std::memory_order_relaxed))
 				return bestScore;
-			if (limit.outOfTime()){
+			if (limit.outOfTime() || limit.outOfNodes(thread.nodes)){
 				thread.abort.store(true, std::memory_order_relaxed);
 				return bestScore;
 			}
@@ -270,6 +270,13 @@ namespace Search {
 		//limit.start();
 		threadInfo.abort.store(false);
 		threadInfo.board = board;
+		threadInfo.accumulator.refresh(threadInfo.board);
+
+		for (int i=0;i<HL_N;i++){
+			std::cout << threadInfo.accumulator.white[i] << " ";
+		}
+		std::cout << std::endl;
+		std::cout << network.inference(&threadInfo.board, &threadInfo.accumulator) << std::endl;
 		// TODO set nodes and stuff too
 		bool isMain = threadInfo.type == ThreadType::MAIN;
 
@@ -285,7 +292,7 @@ namespace Search {
 			
 			auto aborted = [&]() {
 				if (isMain)
-					return limit.outOfTime() || threadInfo.abort.load(std::memory_order_relaxed);
+					return limit.outOfTime() || limit.outOfNodes(threadInfo.nodes) || threadInfo.abort.load(std::memory_order_relaxed);
 				else
 					return threadInfo.abort.load(std::memory_order_relaxed);
 			};

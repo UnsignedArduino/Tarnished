@@ -21,9 +21,11 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     int64_t mtime = 0;
     int64_t ctime = 0;
     int64_t depth = 0;
+    int64_t nodes = -1;
 
     SetLimit(str, "movetime",  &mtime); 
     SetLimit(str, "depth",     &depth);
+    SetLimit(str, "nodes",     &nodes);
 
     if (mtime == 0 && depth == 0){
         SetLimit(str, color == Color::WHITE ? "wtime" : "btime", &ctime);    
@@ -32,7 +34,8 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     limit.ctime = ctime;  
     limit.movetime = mtime;
     limit.depth = depth;
-
+    limit.maxnodes = nodes;
+    std::cout << limit.maxnodes << "\n";
     limit.start();
 }
   
@@ -53,7 +56,7 @@ void UCIPosition(Board &board, char *str) {
         return;
 
     Accumulator acc;
-    acc.refresh(board);
+    
     // Loop over the moves and make them in succession
     char *move = strtok(str, " ");
     while ((move = strtok(NULL, " "))) {
@@ -63,6 +66,8 @@ void UCIPosition(Board &board, char *str) {
         board.makeMove(uci::uciToMove(board, m));
     }
     // Reset the state
+    acc.refresh(board);
+    
     //std::cout << "Repeat " << board.isRepetition(1) << std::endl;
     //board.setFen(board.getFen());
 
@@ -88,7 +93,7 @@ void UCISetOption(Searcher &searcher, char *str) {
     }
 }
 void UCIInfo(){
-    std::cout << "id name Tarnished\n";
+    std::cout << "id name Tarnished v2.0 (Warrior)\n";
     std::cout << "id author Anik Patel\n";
     std::cout << "option name Hash type spin default 16 min 2 max 65536\n";
     std::cout << "option name Threads type spin default 1 min 1 max 256\n";
@@ -98,7 +103,7 @@ void UCIInfo(){
 void UCIEvaluate(Board &board){
     Accumulator a;
     a.refresh(board);
-    std::cout << network.inference(&board, &a) << std::endl; 
+    std::cout << network.inference(&board, &a) << std::endl;
 }
 
 void UCIGo(Searcher &searcher, Board &board, char *str){

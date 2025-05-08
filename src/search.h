@@ -3,6 +3,7 @@
 #include "external/chess.hpp"
 #include "tt.h"
 #include "timeman.h"
+#include "nnue.h"
 #include <atomic>
 #include <cstring>
 #include <thread>
@@ -36,6 +37,7 @@ struct ThreadInfo {
 	TTable &TT;
 	std::atomic<bool> &abort;
 	Board board;
+	Accumulator accumulator;
 	std::atomic<uint64_t> nodes;
 
 	std::array<std::array<std::array<int, 64>, 64>, 2> history;

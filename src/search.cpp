@@ -2,6 +2,7 @@
 #include "searcher.h"
 #include "eval.h"
 #include "tt.h"
+#include "util.h"
 
 #include <algorithm>
 #include <random>
@@ -47,7 +48,7 @@ namespace Search {
 				std::iter_swap(mvlst.begin() + start, mvlst.begin() + i);
 			}
 		}
-	}
+	}	
 	template<bool isPV>
 	int qsearch(int ply, int alpha, const int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
 		//bool isPV = alpha != beta - 1;
@@ -61,7 +62,8 @@ namespace Search {
 			return ttEntry->score;
 		}
 
-		int score = Evaluate(thread.board, thread.board.sideToMove());
+		//int score = Eval::Evaluate(thread.board, thread.board.sideToMove());
+		int score = network.inference(&thread.board, &thread.accumulator);
 		if (ply >= MAX_PLY)
 			return score;
 		// if (isPV)
@@ -94,10 +96,12 @@ namespace Search {
 			pickMove(moves, m_);
 			Move move = moves[m_];
 
-			thread.board.makeMove(move);
+			//thread.board.makeMove(move);
+			MakeMove(thread.board, thread.accumulator, move);
 			thread.nodes++;
 			score = -qsearch<isPV>(ply+1, -beta, -alpha, ss+1, thread, limit);
-			thread.board.unmakeMove(move);
+			//thread.board.unmakeMove(move);
+			UnmakeMove(thread.board, thread.accumulator, move);
 
 			if (score > bestScore){
 				bestScore = score;
@@ -151,8 +155,8 @@ namespace Search {
 			goto move_loop;
 
 		// Pruning
-		eval = Evaluate(thread.board, thread.board.sideToMove());
-
+		//eval = Eval::Evaluate(thread.board, thread.board.sideToMove());
+		eval = network.inference(&thread.board, &thread.accumulator);
 		// Reverse Futility Pruning
 		if (depth <= 6 && !root && eval - 80 * depth >= beta && std::abs(beta) < MATE)
 			return eval;
@@ -206,7 +210,8 @@ namespace Search {
 				}
 			}
 
-			thread.board.makeMove<true>(move);
+			//thread.board.makeMove<true>(move);
+			MakeMove(thread.board, thread.accumulator, move);
 			int newDepth = depth-1;
 			moveCount++;
 			thread.nodes++;
@@ -224,7 +229,8 @@ namespace Search {
 			if (isPV && (moveCount == 1 || score > alpha)){
 				score = -search<isPV>(newDepth, ply+1, -beta, -alpha, ss+1, thread, limit);
 			}
-			thread.board.unmakeMove(move);
+			//thread.board.unmakeMove(move);
+			UnmakeMove(thread.board, thread.accumulator, move);
 			if (score > bestScore){
 				bestScore = score;
 				if (score > alpha){
@@ -314,7 +320,7 @@ namespace Search {
 			// Reporting
 			uint64_t nodecnt = (*searcher).nodeCount();
 			threadInfo.board.makeMove(lastPV.moves[0]);
-			std::cout << "info depth " << depth << " score cp " << Evaluate(threadInfo.board, ~threadInfo.board.sideToMove()) << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
+			std::cout << "info depth " << depth << " score cp " << network.inference(&threadInfo.board, &threadInfo.accumulator) << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
 			threadInfo.board.unmakeMove(lastPV.moves[0]);
 			for (int i=0;i<lastPV.length;i++)
 				std::cout << lastPV.moves[i] << " ";

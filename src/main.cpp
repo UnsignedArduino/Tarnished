@@ -2,6 +2,7 @@
 #include "external/chess.hpp"
 #include "search.h"
 #include "searcher.h"
+#include "nnue.h"
 #include "eval.h"
 #include "uci.h"
 #include "timeman.h"
@@ -9,6 +10,8 @@
 using namespace chess;
 using namespace std::chrono;
 
+
+NNUE network;
 
 // Thanks Weiss
 void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
@@ -48,6 +51,8 @@ void UCIPosition(Board &board, char *str) {
     if ((str = strstr(str, "moves")) == NULL)
         return;
 
+    Accumulator acc;
+    acc.refresh(board);
     // Loop over the moves and make them in succession
     char *move = strtok(str, " ");
     while ((move = strtok(NULL, " "))) {
@@ -89,6 +94,12 @@ void UCIInfo(){
     std::cout << "uciok" << std::endl; 
 }
 
+void UCIEvaluate(Board &board){
+    Accumulator a;
+    a.refresh(board);
+    std::cout << network.inference(&board, &a) << std::endl; 
+}
+
 void UCIGo(Searcher &searcher, Board &board, char *str){
     searcher.stop();
 
@@ -104,6 +115,9 @@ void UCIGo(Searcher &searcher, Board &board, char *str){
 int main(int agrc, char *argv[]){
     //r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1
 	Board board = Board();
+
+    network.load("network/beans.bin");
+
     Searcher searcher = Searcher();
     searcher.initialize(1); // Default one thread
 
@@ -126,7 +140,7 @@ int main(int agrc, char *argv[]){
 
             // Non Standard
             case PRINT      : std::cout << board << std::endl;            break;
-            case EVAL       : std::cout << Evaluate(board, board.sideToMove()) << std::endl; break;
+            case EVAL       : UCIEvaluate(board);                         break;
             case BENCH      : Search::bench();                            break;
 
         }

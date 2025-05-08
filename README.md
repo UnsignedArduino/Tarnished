@@ -2,9 +2,8 @@
 <p align="center">
 </p>
 <h1 align="center">Tarnished</h1>
-UCI Chess Engine written in C++ featuring NNUE evaluation
 
-The name is a reference to a certain video game protagonist
+UCI Chess Engine written in C++ featuring NNUE evaluation. The name is a reference to a certain video game protagonist
 
 As of right now, all tests have been conducted on my personal PC with the use of [cutechess-cli](https://github.com/cutechess/cutechess/tree/master) but will eventually migrate to [OpenBench](https://github.com/AndyGrant/OpenBench)
 

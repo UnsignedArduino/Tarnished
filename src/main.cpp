@@ -1,4 +1,5 @@
 #include <chrono>
+#include <random>
 #include "external/chess.hpp"
 #include "search.h"
 #include "searcher.h"
@@ -114,9 +115,11 @@ void UCIGo(Searcher &searcher, Board &board, char *str){
 
 int main(int agrc, char *argv[]){
     //r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1
+
 	Board board = Board();
 
-    network.load("network/beans.bin");
+    network.randomize();
+    //network.load("network/beans.bin");
 
     Searcher searcher = Searcher();
     searcher.initialize(1); // Default one thread

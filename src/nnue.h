@@ -72,6 +72,7 @@ struct NNUE {
 	static int feature(Color persp, Color color, PieceType piece, Square square);
 
 	void load(const std::string &file);
+	void randomize();
 
 	int inference(Board *board, Accumulator *accumulator);
 };

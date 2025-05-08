@@ -5,7 +5,7 @@
 #include <format>
 #include <algorithm>
 #include <immintrin.h>
-
+#include <random>
 
 
 int16_t NNUE::ReLU_(int16_t x){
@@ -44,7 +44,22 @@ void NNUE::load(const std::string &file){
 		OW[i] = readLittleEndian<int16_t>(stream);
 	}
 	outputBias = readLittleEndian<int16_t>(stream);
-	
+}
+
+void NNUE::randomize(){
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> distrib(-500, 500);
+	for (int i=0;i<H1.size();++i){
+		H1[i] = distrib(gen);
+	}
+	for (int i=0;i<H1Bias.size();++i){
+		H1Bias[i] = distrib(gen);
+	}
+	for (int i=0;i<OW.size(); ++i) {
+		OW[i] = distrib(gen);
+	}
+	outputBias = distrib(gen);
 }
 
 int NNUE::inference(Board *board, Accumulator *accumulator){

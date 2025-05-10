@@ -144,13 +144,15 @@ void runThread(int ti) {
 	gameBuffer.clear();
 	// Play a game
 	int64_t poses = 0;
+	TimeLimit timer;
+	timer.start();
 	for (int G=1;G<1'000'000;G++){
 		Board board;
 		thread.reset();
 		TT.clear();
 		moveScoreBuffer.clear();
 
-		for (size_t i=0;i<8;i++){
+		for (size_t i=0;i<DATAGEN_RANDOM_MOVES;i++){
 			makeRandomMove(board);
 			if (board.isGameOver().second != GameResult::NONE)
 				break;
@@ -175,6 +177,7 @@ void runThread(int ti) {
 			board.makeMove(thread.bestMove);
 			end = board.isGameOver();
 			poses++;
+			cached++;
 
 		}
 		double wdl;
@@ -191,10 +194,12 @@ void runThread(int ti) {
 		gameBuffer.emplace_back(marlin, moveScoreBuffer);
 
 		if (G % 50 == 0){
-			std::cout << "Thread: " << ti << " Total Games: " << G << " Positions: " << poses << std::endl;
+			std::cout << "Thread: " << ti << " Total Games: " << G << " Positions: " << poses << " Estimated speed " << cached*1000.0/(double)timer.elapsed() << " pos/s" << std::endl;
+			timer.start();
+			cached = 0;
 		}
-		if (G % 256 == 0){
-			std::cout << "Thread: " << ti << " writing 256 games\n";
+		if (G % GAMES_BUFFER == 0){
+			std::cout << "Thread: " << ti << " writing " << GAMES_BUFFER << " games" << std::endl;
 			for (ViriEntry &game : gameBuffer){
 				writeViriformat(outFile, game);
 			}

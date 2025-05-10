@@ -11,8 +11,9 @@
 using namespace chess;
 constexpr int SOFT_NODE_COUNT = 5000;
 constexpr int HARD_NODE_COUNT = 100000;
-constexpr int GAMES_BUFFER = 1000;
+constexpr int GAMES_BUFFER = 250;
 constexpr int DATAGEN_THREADS = 8;
+constexpr int DATAGEN_RANDOM_MOVES = 8;
 
 // Yoink from Prelude
 template<size_t size>

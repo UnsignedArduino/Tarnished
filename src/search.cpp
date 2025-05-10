@@ -172,7 +172,7 @@ namespace Search {
 
 
 	move_loop:
-		Move bestMove = Move();
+		Move bestMove = Move::NO_MOVE;
 		Movelist moves;
 		Movelist seenQuiets;
 
@@ -182,7 +182,7 @@ namespace Search {
 		for (auto &move : moves){
 			move.setScore(scoreMove(move, ttEntry->move, ss->killer, thread));
 		}
-
+		bestMove = moves[0];
 		// Other vars
 		bool skipQuiets = false;
 		for (int m_ = 0;m_<moves.size();m_++){
@@ -235,6 +235,8 @@ namespace Search {
 				bestScore = score;
 				if (score > alpha){
 					bestMove = move;
+					if (root)
+						thread.bestMove = bestMove;
 					ttFlag = TTFlag::EXACT;
 					alpha = score;
 					if (isPV){
@@ -272,11 +274,6 @@ namespace Search {
 		threadInfo.board = board;
 		threadInfo.accumulator.refresh(threadInfo.board);
 
-		for (int i=0;i<HL_N;i++){
-			std::cout << threadInfo.accumulator.white[i] << " ";
-		}
-		std::cout << std::endl;
-		std::cout << network.inference(&threadInfo.board, &threadInfo.accumulator) << std::endl;
 		// TODO set nodes and stuff too
 		bool isMain = threadInfo.type == ThreadType::MAIN;
 
@@ -288,13 +285,13 @@ namespace Search {
 		int score = -INFINITE;
 		int lastScore = -INFINITE;
 
+		int moveEval = -INFINITE;
 		for (int depth=1;depth<=limit.depth;depth++){
-			
 			auto aborted = [&]() {
 				if (isMain)
-					return limit.outOfTime() || limit.outOfNodes(threadInfo.nodes) || threadInfo.abort.load(std::memory_order_relaxed);
+					return limit.outOfTime() || limit.outOfNodes(threadInfo.nodes) || limit.softNodes(threadInfo.nodes) || threadInfo.abort.load(std::memory_order_relaxed);
 				else
-					return threadInfo.abort.load(std::memory_order_relaxed);
+					return limit.softNodes(threadInfo.nodes) || threadInfo.abort.load(std::memory_order_relaxed);
 			};
 			// Aspiration Windows (WIP)
 			if (false){
@@ -314,30 +311,43 @@ namespace Search {
 			else
 				score = search<true>(depth, 0, -INFINITE, INFINITE, ss, threadInfo, limit);
 			// ---------------------
-			
+			//std::cout << "Depth " << depth << " Nodes " << threadInfo.nodes << " Hard " << limit.outOfNodes(threadInfo.nodes) << " soft " << limit.softNodes(threadInfo.nodes) << std::endl;
+			//std::cout << threadInfo.board.getFen() << std::endl;
 			if (depth != 1 && aborted())
 				break;
 
 			lastScore = score;
-
-			if (!isMain)
-				continue;
 			lastPV = ss->pv;
+
+			if (!isMain){
+				
+				continue;
+			}
 
 			// Reporting
 			uint64_t nodecnt = (*searcher).nodeCount();
-			threadInfo.board.makeMove(lastPV.moves[0]);
-			std::cout << "info depth " << depth << " score cp " << network.inference(&threadInfo.board, &threadInfo.accumulator) << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
-			threadInfo.board.unmakeMove(lastPV.moves[0]);
+			MakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
+			moveEval = network.inference(&threadInfo.board, &threadInfo.accumulator);
+			std::cout << "info depth " << depth << " score cp " << -moveEval << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
+			UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
 			for (int i=0;i<lastPV.length;i++)
 				std::cout << lastPV.moves[i] << " ";
 			std::cout << std::endl;
+
 		}
+		
 		if (isMain){
 			std::cout << "bestmove " << uci::moveToUci(lastPV.moves[0]) << std::endl;
 		}
 		threadInfo.abort.store(true, std::memory_order_relaxed);
-		return score;
+
+		
+		threadInfo.bestMove = lastPV.moves[0];
+		//std::cout << "PRE EVAL ITER DEEP " << threadInfo.bestMove << std::endl;
+		MakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
+		moveEval = network.inference(&threadInfo.board, &threadInfo.accumulator);
+		UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
+		return moveEval;
 	}
 
 	// Benchmark for OpenBench

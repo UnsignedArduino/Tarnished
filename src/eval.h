@@ -6,9 +6,9 @@
 #include "external/chess.hpp"
 
 using namespace chess;
+constexpr int INFINITE = std::numeric_limits<int>::max();
+constexpr int MATE = 32767;
 
-#define MATE 31000
-#define INFINITE MATE + 1
 #define NO_SCORE MATE + 2
 
 #define MakeScore(mg, eg) ((int32_t)((uint32_t)(eg) << 16) + (mg))

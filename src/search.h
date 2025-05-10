@@ -39,6 +39,7 @@ struct ThreadInfo {
 	Board board;
 	Accumulator accumulator;
 	std::atomic<uint64_t> nodes;
+	Move bestMove;
 
 	std::array<std::array<std::array<int, 64>, 64>, 2> history;
 	//uint64_t ttHits;
@@ -48,9 +49,10 @@ struct ThreadInfo {
 		this->board = Board();
 		std::memset(&history, 0, sizeof(history));
 		nodes = 0;
+		bestMove = Move::NO_MOVE;
 		//ttHits = 0;
 	}
-	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history) {
+	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history), bestMove(other.bestMove) {
 		this->board = other.board;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}
@@ -63,6 +65,7 @@ struct ThreadInfo {
 	}
 	void reset(){
 		nodes.store(0, std::memory_order_relaxed);
+		bestMove = Move::NO_MOVE;
 		for (auto &i : history)
 			for (auto &j : i)
 				j.fill(0);
@@ -99,6 +102,7 @@ struct Limit {
 	int64_t ctime;
 	int64_t movetime;
 	int64_t maxnodes;
+	int64_t softnodes;
 	Color color;
 
 	Limit(){
@@ -106,6 +110,7 @@ struct Limit {
 		ctime = 0;
 		movetime = 0;
 		maxnodes = -1;
+		softnodes = -1;
 	}
 	Limit(int64_t depth, int64_t ctime, int64_t movetime, Color color) : depth(depth), ctime(ctime), movetime(movetime), color(color) {
 		
@@ -128,12 +133,16 @@ struct Limit {
 	bool outOfNodes(int64_t cnt){
 		return maxnodes != -1 && cnt > maxnodes;
 	}
+	bool softNodes(int64_t cnt){
+		return softnodes != -1 && cnt > softnodes;
+	}
 	bool outOfTime(){
 		return (maxnodes == -1 && static_cast<int64_t>(timer.elapsed()) >= movetime - 25);
 	}
 };
 //int search(Board &board, int depth, int ply, int alpha, int beta, Stack *ss, ThreadInfo &thread);
 //int iterativeDeepening(Board board, ThreadInfo &threadInfo, Searcher *searcher);
+int iterativeDeepening(Board &board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher);
 
 void bench();
 } 

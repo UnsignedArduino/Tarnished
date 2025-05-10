@@ -82,6 +82,10 @@ int NNUE::inference(Board *board, Accumulator *accumulator){
 			eval += SCReLU_(accumulatorOPP[i]) * OW[HL_N+i];
 			//printf("OutputW1 %hd OutputW2 %hd Eval %lld\n", OW[i], OW[HL_N+i], eval);
 		}
+		else if (ACTIVATION == CReLU){
+			eval += CReLU_(accumulatorSTM[i]) * OW[i];
+			eval += CReLU_(accumulatorOPP[i]) * OW[HL_N+i];
+		}
 	}
 	if (ACTIVATION == SCReLU)
 		eval /= QA;

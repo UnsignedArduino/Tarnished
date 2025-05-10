@@ -1,5 +1,8 @@
 #include <chrono>
 #include <random>
+#include <iostream>
+#include <fstream>
+#include <filesystem>
 #include "external/chess.hpp"
 #include "search.h"
 #include "searcher.h"
@@ -7,6 +10,9 @@
 #include "eval.h"
 #include "uci.h"
 #include "timeman.h"
+#include "datagen.h"
+
+//#define DATAGEN
 
 using namespace chess;
 using namespace std::chrono;
@@ -22,6 +28,7 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     int64_t ctime = 0;
     int64_t depth = 0;
     int64_t nodes = -1;
+    int64_t softnodes = -1;
 
     SetLimit(str, "movetime",  &mtime); 
     SetLimit(str, "depth",     &depth);
@@ -35,7 +42,6 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     limit.movetime = mtime;
     limit.depth = depth;
     limit.maxnodes = nodes;
-    std::cout << limit.maxnodes << "\n";
     limit.start();
 }
   
@@ -56,18 +62,20 @@ void UCIPosition(Board &board, char *str) {
         return;
 
     Accumulator acc;
-    
+
     // Loop over the moves and make them in succession
+
+
     char *move = strtok(str, " ");
     while ((move = strtok(NULL, " "))) {
 
         // Parse and make move
         std::string m = move;
-        board.makeMove(uci::uciToMove(board, m));
+        Move move_ = uci::uciToMove(board, m);
+        board.makeMove(move_);
     }
     // Reset the state
     acc.refresh(board);
-    
     //std::cout << "Repeat " << board.isRepetition(1) << std::endl;
     //board.setFen(board.getFen());
 
@@ -93,7 +101,7 @@ void UCISetOption(Searcher &searcher, char *str) {
     }
 }
 void UCIInfo(){
-    std::cout << "id name Tarnished v2.0 (Warrior)\n";
+    std::cout << "id name Tarnished v2.0 (Ambition)\n";
     std::cout << "id author Anik Patel\n";
     std::cout << "option name Hash type spin default 16 min 2 max 65536\n";
     std::cout << "option name Threads type spin default 1 min 1 max 256\n";
@@ -123,11 +131,13 @@ int main(int agrc, char *argv[]){
 
 	Board board = Board();
 
-    network.randomize();
-    //network.load("network/beans.bin");
+    //network.randomize();
+    network.load("network/latest.bin");
+    
 
     Searcher searcher = Searcher();
     searcher.initialize(1); // Default one thread
+    searcher.reset();
 
     if (agrc > 1){
         std::string arg = argv[1];
@@ -150,6 +160,7 @@ int main(int agrc, char *argv[]){
             case PRINT      : std::cout << board << std::endl;            break;
             case EVAL       : UCIEvaluate(board);                         break;
             case BENCH      : Search::bench();                            break;
+            case DATAGEN    : startDatagen(DATAGEN_THREADS);              break;
 
         }
     }

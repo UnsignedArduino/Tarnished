@@ -124,7 +124,16 @@ void UCIGo(Searcher &searcher, Board &board, char *str){
     //searcher.stop();
 }   
 
-
+void BeginDatagen(char *str){
+    // Same way as setoption
+    // datagen name Threads value 16
+    int threadc = DATAGEN_THREADS; // 8 default
+    if (OptionName(str, "Threads")){
+        threadc = atoi(OptionValue(str));
+    }
+    std::cout << "Launching Data Generation with " << threadc << " threads" << std::endl;
+    startDatagen(threadc); 
+}
 
 int main(int agrc, char *argv[]){
     //r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1
@@ -160,7 +169,7 @@ int main(int agrc, char *argv[]){
             case PRINT      : std::cout << board << std::endl;            break;
             case EVAL       : UCIEvaluate(board);                         break;
             case BENCH      : Search::bench();                            break;
-            case DATAGEN    : startDatagen(DATAGEN_THREADS);              break;
+            case DATAGEN    : BeginDatagen(str);                          break;
 
         }
     }

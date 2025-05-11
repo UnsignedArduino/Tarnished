@@ -19,8 +19,11 @@ int16_t NNUE::CReLU_(int16_t x){
 }
 
 int32_t NNUE::SCReLU_(int16_t x){
-	const int32_t c = CReLU_(x);
-	return c * c;
+	if (x < 0)
+		return 0;
+	else if (x > QA)
+		return QA * QA;
+	return x * x;
 }
 
 int NNUE::feature(Color persp, Color color, PieceType p, Square sq){
@@ -91,7 +94,6 @@ int NNUE::inference(Board *board, Accumulator *accumulator){
 		eval /= QA;
 
 	eval += outputBias;
-
 	//printf("EVAL %lld\n", (eval * NNUE_SCALE) / (QA * QB));
 	return (eval * NNUE_SCALE) / (QA * QB);
 

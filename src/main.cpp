@@ -12,10 +12,31 @@
 #include "timeman.h"
 #include "datagen.h"
 
-//#define DATAGEN
 
 using namespace chess;
 using namespace std::chrono;
+
+
+#ifndef EVALFILE
+    #define EVALFILE "network/latest.bin"
+#endif
+
+#ifdef _MSC_VER
+    #define MSVC
+    #pragma push_macro("_MSC_VER")
+    #undef _MSC_VER
+#endif
+
+#include "external/incbin.h"
+
+#ifdef MSVC
+    #pragma pop_macro("_MSC_VER")
+    #undef MSVC
+#endif
+
+#if !defined(_MSC_VER) || defined(__clang__)
+INCBIN(EVAL, EVALFILE);
+#endif
 
 
 NNUE network;
@@ -141,7 +162,12 @@ int main(int agrc, char *argv[]){
 	Board board = Board();
 
     //network.randomize();
-    network.load("network/latest.bin");
+    #if defined(_MSC_VER) && !defined(__clang__)
+        network.loadNetwork(EVALFILE);
+        std::cerr << "WARNING: This file was compiled with MSVC, this means that an nnue was NOT embedded into the exe." << std::endl;
+    #else
+            network = *reinterpret_cast<const NNUE*>(gEVALData);
+    #endif
     
 
     Searcher searcher = Searcher();

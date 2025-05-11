@@ -20,7 +20,7 @@ constexpr int ReLU   = 0;
 constexpr int CReLU  = 1;
 constexpr int SCReLU = 2;
 
-constexpr int ACTIVATION = CReLU;
+constexpr int ACTIVATION = SCReLU;
 
 const bool IS_LITTLE_ENDIAN = true;
 

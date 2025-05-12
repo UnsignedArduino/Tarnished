@@ -326,10 +326,10 @@ namespace Search {
 
 			// Reporting
 			uint64_t nodecnt = (*searcher).nodeCount();
-			MakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
-			moveEval = network.inference(&threadInfo.board, &threadInfo.accumulator);
-			std::cout << "info depth " << depth << " score cp " << -moveEval << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
-			UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
+			// MakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
+			// moveEval = network.inference(&threadInfo.board, &threadInfo.accumulator);
+			std::cout << "info depth " << depth << " score cp " << score << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
+			//UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
 			for (int i=0;i<lastPV.length;i++)
 				std::cout << lastPV.moves[i] << " ";
 			std::cout << std::endl;
@@ -341,13 +341,12 @@ namespace Search {
 		}
 		threadInfo.abort.store(true, std::memory_order_relaxed);
 
-		
 		threadInfo.bestMove = lastPV.moves[0];
 		//std::cout << "PRE EVAL ITER DEEP " << threadInfo.bestMove << std::endl;
-		MakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
-		moveEval = network.inference(&threadInfo.board, &threadInfo.accumulator);
-		UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
-		return moveEval;
+		// MakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
+		// moveEval = network.inference(&threadInfo.board, &threadInfo.accumulator);
+		// UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
+		return lastScore;
 	}
 
 	// Benchmark for OpenBench

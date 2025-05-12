@@ -62,8 +62,8 @@ struct Accumulator {
 struct NNUE {
 	std::array<int16_t, HL_N * 768> H1;
 	std::array<int16_t, HL_N> H1Bias;
-	std::array<int16_t, HL_N * 2> OW;
-	int16_t outputBias;
+	std::array<std::array<int16_t, HL_N * 2>, OUTPUT_BUCKETS> OW;
+	std::array<int16_t, OUTPUT_BUCKETS> outputBias;
 
 	int16_t ReLU_(int16_t x);
 	int16_t CReLU_(int16_t x);
@@ -74,6 +74,7 @@ struct NNUE {
 	void load(const std::string &file);
 	void randomize();
 
+	int32_t optimizedSCReLU(const std::array<int16_t, HL_N> &STM, const std::array<int16_t, HL_N> &OPP, Color col, size_t bucket);
 	int inference(Board *board, Accumulator *accumulator);
 };
 

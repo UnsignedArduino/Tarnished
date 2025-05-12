@@ -169,15 +169,15 @@ void runThread(int ti) {
 			thread.nodes = 0;
 			thread.bestMove = Move::NO_MOVE;
 			int eval = Search::iterativeDeepening(std::ref(board), std::ref(thread), limit, nullptr);
-			eval = std::min(std::max(-32000, eval), 32000);
-			eval = board.sideToMove() == Color::BLACK ? eval : -eval;
+			eval = std::min(std::max(-INFINITE, eval), INFINITE);
+			eval = board.sideToMove() == Color::WHITE ? eval : -eval;
 			Move m = thread.bestMove;
 			moveScoreBuffer.emplace_back(packMove(m), (int16_t)eval);
-
 			board.makeMove(thread.bestMove);
 			end = board.isGameOver();
 			poses++;
 			cached++;
+
 
 		}
 		double wdl;

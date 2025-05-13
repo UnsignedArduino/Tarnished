@@ -253,95 +253,86 @@ void Accumulator::refresh(Board &board){
 	// }
 }
 
+void Accumulator::print(){
+	for (int i=0;i<HL_N;i++){
+		std::cout << "White: " << white[i] << " Black: " << black[i] << std::endl;
+	}
+}
 
 // Quiet Accumulation
 void Accumulator::quiet(Color stm, Square add, PieceType addPT, Square sub, PieceType subPT){
-	int addW = NNUE::feature(Color::WHITE, stm, addPT, add);
-	int addB = NNUE::feature(Color::BLACK, stm, addPT, add);
 
-	int subW = NNUE::feature(Color::WHITE, stm, subPT, sub);
-	int subB = NNUE::feature(Color::BLACK, stm, subPT, sub);
+	const int addW = NNUE::feature(Color::WHITE, stm, addPT, add);
+	const int addB = NNUE::feature(Color::BLACK, stm, addPT, add);
+
+	const int subW = NNUE::feature(Color::WHITE, stm, subPT, sub);
+	const int subB = NNUE::feature(Color::BLACK, stm, subPT, sub);
 
 	for (int i=0;i<HL_N;i++){
-		white[i] += network.H1[addW * HL_N + i];
-		black[i] += network.H1[addB * HL_N + i];
-
-		white[i] -= network.H1[subW * HL_N + i];
-		black[i] -= network.H1[subB * HL_N + i];
+		white[i] += network.H1[addW * HL_N + i] - network.H1[subW * HL_N + i];
+		black[i] += network.H1[addB * HL_N + i] - network.H1[subB * HL_N + i];
 	}
 }
 // Capture Accumulation
 void Accumulator::capture(Color stm, Square add, PieceType addPT, Square sub1, PieceType subPT1, Square sub2, PieceType subPT2){
-	int addW = NNUE::feature(Color::WHITE, stm, addPT, add);
-	int addB = NNUE::feature(Color::BLACK, stm, addPT, add);
+	const int addW = NNUE::feature(Color::WHITE, stm, addPT, add);
+	const int addB = NNUE::feature(Color::BLACK, stm, addPT, add);
 
-	int subW1 = NNUE::feature(Color::WHITE, stm, subPT1, sub1);
-	int subB1 = NNUE::feature(Color::BLACK, stm, subPT1, sub1);
+	const int subW1 = NNUE::feature(Color::WHITE, stm, subPT1, sub1);
+	const int subB1 = NNUE::feature(Color::BLACK, stm, subPT1, sub1);
 
-	int subW2 = NNUE::feature(Color::WHITE, ~stm, subPT2, sub2);
-	int subB2 = NNUE::feature(Color::BLACK, ~stm, subPT2, sub2);
+	const int subW2 = NNUE::feature(Color::WHITE, ~stm, subPT2, sub2);
+	const int subB2 = NNUE::feature(Color::BLACK, ~stm, subPT2, sub2);
 
 	for (int i=0;i<HL_N;i++){
-		white[i] += network.H1[addW * HL_N + i];
-		black[i] += network.H1[addB * HL_N + i];
-
-		white[i] -= network.H1[subW1 * HL_N + i];
-		black[i] -= network.H1[subB1 * HL_N + i];
-
-		white[i] -= network.H1[subW2 * HL_N + i];
-		black[i] -= network.H1[subB2 * HL_N + i];
+		white[i] += network.H1[addW * HL_N + i] - network.H1[subW1 * HL_N + i] - network.H1[subW2 * HL_N + i];
+		black[i] += network.H1[addB * HL_N + i] - network.H1[subB1 * HL_N + i] - network.H1[subB2 * HL_N + i];
 	}
 }
 
 // Undo Capture
 void Accumulator::uncapture(Color stm, Square add1, PieceType addPT1, Square add2, PieceType addPT2, Square sub, PieceType subPT){
-	int addW1 = NNUE::feature(Color::WHITE, stm, addPT1, add1);
-	int addB1 = NNUE::feature(Color::BLACK, stm, addPT1, add1);
+	const int addW1 = NNUE::feature(Color::WHITE, stm, addPT1, add1);
+	const int addB1 = NNUE::feature(Color::BLACK, stm, addPT1, add1);
 
-	int addW2 = NNUE::feature(Color::WHITE, ~stm, addPT2, add2);
-	int addB2 = NNUE::feature(Color::BLACK, ~stm, addPT2, add2);
+	const int addW2 = NNUE::feature(Color::WHITE, ~stm, addPT2, add2);
+	const int addB2 = NNUE::feature(Color::BLACK, ~stm, addPT2, add2);
 
-	int subW = NNUE::feature(Color::WHITE, stm, subPT, sub);
-	int subB = NNUE::feature(Color::BLACK, stm, subPT, sub);
+	const int subW = NNUE::feature(Color::WHITE, stm, subPT, sub);
+	const int subB = NNUE::feature(Color::BLACK, stm, subPT, sub);
 
 	for (int i=0;i<HL_N;i++){
-		white[i] += network.H1[addW1 * HL_N + i];
-		black[i] += network.H1[addB1 * HL_N + i];
-
-		white[i] += network.H1[addW2 * HL_N + i];
-		black[i] += network.H1[addB2 * HL_N + i];
-
-		white[i] -= network.H1[subW * HL_N + i];
-		black[i] -= network.H1[subB * HL_N + i];
+		white[i] += network.H1[addW1 * HL_N + i] + network.H1[addW2 * HL_N + i] - network.H1[subW * HL_N + i];
+		black[i] += network.H1[addB1 * HL_N + i] + network.H1[addB2 * HL_N + i] - network.H1[subB * HL_N + i];
 	}
 }
 
 // Castle Accumulation
-void Accumulator::castle(Color stm, Square add1, PieceType addPT1, Square add2, PieceType addPT2, Square sub1, PieceType subPT1, Square sub2, PieceType subPT2){
-	int addW1 = NNUE::feature(Color::WHITE, stm, addPT1, add1);
-	int addB1 = NNUE::feature(Color::BLACK, stm, addPT1, add1);
+// void Accumulator::castle(Color stm, Square add1, PieceType addPT1, Square add2, PieceType addPT2, Square sub1, PieceType subPT1, Square sub2, PieceType subPT2){
+// 	const int addW1 = NNUE::feature(Color::WHITE, stm, addPT1, add1);
+// 	const int addB1 = NNUE::feature(Color::BLACK, stm, addPT1, add1);
 
-	int addW2 = NNUE::feature(Color::WHITE, stm, addPT2, add2);
-	int addB2 = NNUE::feature(Color::BLACK, stm, addPT2, add2);
+// 	const int addW2 = NNUE::feature(Color::WHITE, stm, addPT2, add2);
+// 	const int addB2 = NNUE::feature(Color::BLACK, stm, addPT2, add2);
 
-	int subW1 = NNUE::feature(Color::WHITE, stm, subPT1, sub1);
-	int subB1 = NNUE::feature(Color::BLACK, stm, subPT1, sub1);
+// 	const int subW1 = NNUE::feature(Color::WHITE, stm, subPT1, sub1);
+// 	const int subB1 = NNUE::feature(Color::BLACK, stm, subPT1, sub1);
 
-	int subW2 = NNUE::feature(Color::WHITE, stm, subPT2, sub2);
-	int subB2 = NNUE::feature(Color::BLACK, stm, subPT2, sub2);
+// 	const int subW2 = NNUE::feature(Color::WHITE, stm, subPT2, sub2);
+// 	const int subB2 = NNUE::feature(Color::BLACK, stm, subPT2, sub2);
 
-	for (int i=0;i<HL_N;i++){
-		white[i] += network.H1[addW1 * HL_N + i];
-		black[i] += network.H1[addB1 * HL_N + i];
+// 	for (int i=0;i<HL_N;i++){
+// 		white[i] += network.H1[addW1 * HL_N + i];
+// 		black[i] += network.H1[addB1 * HL_N + i];
 
-		white[i] += network.H1[addW2 * HL_N + i];
-		black[i] += network.H1[addB2 * HL_N + i];
+// 		white[i] += network.H1[addW2 * HL_N + i];
+// 		black[i] += network.H1[addB2 * HL_N + i];
 
-		white[i] -= network.H1[subW1 * HL_N + i];
-		black[i] -= network.H1[subB1 * HL_N + i];
+// 		white[i] -= network.H1[subW1 * HL_N + i];
+// 		black[i] -= network.H1[subB1 * HL_N + i];
 
-		white[i] -= network.H1[subW2 * HL_N + i];
-		black[i] -= network.H1[subB2 * HL_N + i];
-	}
-}
+// 		white[i] -= network.H1[subW2 * HL_N + i];
+// 		black[i] -= network.H1[subB2 * HL_N + i];
+// 	}
+// }
 

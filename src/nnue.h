@@ -51,7 +51,7 @@ struct Accumulator {
 	std::array<int16_t, HL_N> black;
 
 	void refresh(Board &board);
-
+	void print();
 	// addsub, addsubsub, addaddsubsub
 	void quiet(Color stm, Square add, PieceType addPT, Square sub, PieceType subPT);
 	void capture(Color stm, Square add, PieceType addPT, Square sub1, PieceType subPT1, Square sub2, PieceType subPT2);

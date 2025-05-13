@@ -45,9 +45,11 @@ Alternatively, with `CMake`
     - Selectivity
         - Reverse Futility Pruning
         - Null Move Pruning
+        - Improving Heuristic
         - Late Move Reductions
         - Late Move Pruning
         - Terminal Conditions (Mate, Stalemate, 3fold...)
+        - Internal Iterative Reductions
  - Misc
      - Lazy SMP (functional but not tested thoroughly)
 
@@ -68,6 +70,6 @@ Alternatively, with `CMake`
 - [Weiss](https://github.com/TerjeKir/Weiss)
 - [Stash](https://github.com/mhouppin/stash-bot)
 - [Sirius](https://github.com/mcthouacbb/Sirius) 
-- [Stormphrax](https://github.com/Ciekce/Stormphrax)
+- [Stormphrax](https://github.com/Ciekce/Stormphrax) (Ciekce is the goat)
 - [Prelude](https://git.nocturn9x.space/Quinniboi10/Prelude) (Especially for base NNUE code)
 - [Bullet](https://github.com/jw1912/bullet)

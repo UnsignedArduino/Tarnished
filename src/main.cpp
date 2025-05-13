@@ -51,6 +51,7 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     int64_t nodes = -1;
     int64_t softnodes = -1;
 
+
     SetLimit(str, "movetime",  &mtime); 
     SetLimit(str, "depth",     &depth);
     SetLimit(str, "nodes",     &nodes);
@@ -58,7 +59,13 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     if (mtime == 0 && depth == 0){
         SetLimit(str, color == Color::WHITE ? "wtime" : "btime", &ctime);    
     }
-    
+    if (strstr(str, "infinite")){
+        ctime = 0;
+        mtime = 32000;
+        nodes = -1;
+        softnodes = -1;
+        depth = 0;
+    }
     limit.ctime = ctime;  
     limit.movetime = mtime;
     limit.depth = depth;
@@ -94,11 +101,8 @@ void UCIPosition(Board &board, char *str) {
         std::string m = move;
         Move move_ = uci::uciToMove(board, m);
         board.makeMove(move_);
+        //MakeMove(board, acc);
     }
-    // Reset the state
-    acc.refresh(board);
-    //std::cout << "Repeat " << board.isRepetition(1) << std::endl;
-    //board.setFen(board.getFen());
 
 }
 
@@ -170,6 +174,7 @@ int main(int agrc, char *argv[]){
     #endif
     
 
+    Search::fillLmr();
     Searcher searcher = Searcher();
     searcher.initialize(1); // Default one thread
     searcher.reset();

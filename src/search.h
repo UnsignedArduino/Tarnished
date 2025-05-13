@@ -31,6 +31,8 @@ enum ThreadType {
 struct Searcher;
 
 namespace Search {
+	
+void fillLmr();
 
 struct ThreadInfo {
 	ThreadType type;
@@ -127,7 +129,7 @@ struct Limit {
 			}
 		}
 		if (depth == 0)
-			depth = 32;
+			depth = MAX_PLY - 5;
 		timer.start();
 	}
 	bool outOfNodes(int64_t cnt){

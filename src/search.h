@@ -31,7 +31,7 @@ enum ThreadType {
 struct Searcher;
 
 namespace Search {
-	
+
 void fillLmr();
 
 struct ThreadInfo {
@@ -105,6 +105,7 @@ struct Limit {
 	int64_t movetime;
 	int64_t maxnodes;
 	int64_t softnodes;
+	int64_t inc;
 	Color color;
 
 	Limit(){
@@ -117,6 +118,8 @@ struct Limit {
 	Limit(int64_t depth, int64_t ctime, int64_t movetime, Color color) : depth(depth), ctime(ctime), movetime(movetime), color(color) {
 		
 	}
+	// I will eventually fix this ugly code
+	// its just bad
 	void start(){
 		if (movetime == 0){
 			if (depth != 0){

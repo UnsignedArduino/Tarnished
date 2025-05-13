@@ -36,6 +36,7 @@ Alternatively, with `CMake`
     - Principle Variation Search
     - Quiescence Search
     - Iterative Deepening
+    - Aspiration Windows
     - Shared Transposition Table
     - Move Ordering
         - MVV-LVA

@@ -50,14 +50,16 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     int64_t depth = 0;
     int64_t nodes = -1;
     int64_t softnodes = -1;
-
+    int64_t inc = 0;
 
     SetLimit(str, "movetime",  &mtime); 
     SetLimit(str, "depth",     &depth);
     SetLimit(str, "nodes",     &nodes);
+    SetLimit(str, "softnodes",     &softnodes);
 
     if (mtime == 0 && depth == 0){
-        SetLimit(str, color == Color::WHITE ? "wtime" : "btime", &ctime);    
+        SetLimit(str, color == Color::WHITE ? "wtime" : "btime", &ctime);
+        SetLimit(str, color == Color::WHITE ? "winc"  : "binc" , &inc);
     }
     if (strstr(str, "infinite")){
         ctime = 0;
@@ -68,8 +70,10 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     }
     limit.ctime = ctime;  
     limit.movetime = mtime;
+    limit.inc = inc;
     limit.depth = depth;
     limit.maxnodes = nodes;
+    limit.softnodes = softnodes;
     limit.start();
 }
   

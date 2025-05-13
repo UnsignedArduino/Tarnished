@@ -337,6 +337,9 @@ namespace Search {
 		int lastScore = -INFINITE;
 
 		int moveEval = -INFINITE;
+		int oldnodecnt = 0;
+		double branchsum = 0;
+		double avgbranchfac = 0;
 		for (int depth=1;depth<=limit.depth;depth++){
 			auto aborted = [&]() {
 				if (isMain)
@@ -345,38 +348,55 @@ namespace Search {
 					return limit.softNodes(threadInfo.nodes) || threadInfo.abort.load(std::memory_order_relaxed);
 			};
 			// Aspiration Windows (WIP)
-			if (false){
-				// int delta = 40; // 12 probably gains
-				// int alpha  = std::max(lastScore - delta, -INFINITE);
-				// int beta = std::max(lastScore + delta, INFINITE);
-				// while (!aborted()){
-				// 	score = search<true>(depth, 0, alpha, beta, ss, threadInfo, limit);
-				// 	if (score <= alpha || score >= beta) {
-				// 		alpha = -INFINITE;
-				// 		beta = INFINITE;
-				// 	}
-				// 	else
-				// 		break;
-				// }
+			if (depth >= MIN_ASP_WINDOW_DEPTH){
+				int delta = INITIAL_ASP_WINDOW;
+				int alpha  = std::max(lastScore - delta, -INFINITE);
+				int beta = std::min(lastScore + delta, INFINITE);
+				int aspDepth = depth;
+				while (!aborted()){
+					score = search<true>(std::max(aspDepth, 1), 0, alpha, beta, ss, threadInfo, limit);
+					if (score <= alpha){
+						beta = (alpha + beta) / 2;
+						alpha = std::max(alpha - delta, -INFINITE);
+						aspDepth = depth;
+					}
+					else {
+						if (score >= beta){
+							beta = std::min(beta + delta, INFINITE);
+							aspDepth = std::max(aspDepth-1, depth-5);
+						}
+						else
+							break;
+					}
+					delta += delta * ASP_WIDENING_FACTOR / 16;
+				}
 			}
 			else
 				score = search<true>(depth, 0, -INFINITE, INFINITE, ss, threadInfo, limit);
 			// ---------------------
 			//std::cout << "Depth " << depth << " Nodes " << threadInfo.nodes << " Hard " << limit.outOfNodes(threadInfo.nodes) << " soft " << limit.softNodes(threadInfo.nodes) << std::endl;
 			//std::cout << threadInfo.board.getFen() << std::endl;
-			if (depth != 1 && aborted())
+			if (depth != 1 && aborted()){
 				break;
+			}
 
 			lastScore = score;
 			lastPV = ss->pv;
 
+			// Maybe useful info for diagnostics
+			if (oldnodecnt != 0){
+				branchsum += (double)threadInfo.nodes / oldnodecnt;
+				avgbranchfac = branchsum / (depth-1);
+				//std::cout << "Branching factor: " << (double)nodecnt / (double)oldnodecnt << " Average: " << avgbranch / (depth-1) << std::endl;
+			}
+			oldnodecnt = threadInfo.nodes;
 			if (!isMain){
-				
 				continue;
 			}
 
 			// Reporting
 			uint64_t nodecnt = (*searcher).nodeCount();
+			
 			// MakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
 			// moveEval = network.inference(&threadInfo.board, &threadInfo.accumulator);
 			std::cout << "info depth " << depth << " score ";

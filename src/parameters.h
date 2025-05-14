@@ -1,5 +1,14 @@
 #pragma once
 
+
+// NNUE Parameters
+
+constexpr int16_t HL_N = 128;
+constexpr int16_t QA = 255;
+constexpr int16_t QB = 64;
+constexpr int16_t NNUE_SCALE = 400;
+constexpr int OUTPUT_BUCKETS = 8; 
+
 // Search Parameters
 constexpr int RFP_MARGIN = 80;
 constexpr int RFP_MAX_DEPTH = 6;

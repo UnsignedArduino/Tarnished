@@ -1,6 +1,7 @@
 #pragma once
 
 #include "external/chess.hpp"
+#include "parameters.h"
 #include <bit>
 #include <vector>
 #include <sstream>
@@ -8,13 +9,6 @@
 #include <cstring>
 
 using namespace chess;
-
-
-constexpr int16_t HL_N = 64;
-constexpr int16_t QA = 255;
-constexpr int16_t QB = 64;
-constexpr int16_t NNUE_SCALE = 400;
-constexpr int OUTPUT_BUCKETS = 8; 
 
 constexpr int ReLU   = 0;
 constexpr int CReLU  = 1;

@@ -106,6 +106,8 @@ struct Limit {
 	int64_t maxnodes;
 	int64_t softnodes;
 	int64_t inc;
+	int64_t softtime;
+	bool enableClock;
 	Color color;
 
 	Limit(){
@@ -114,25 +116,25 @@ struct Limit {
 		movetime = 0;
 		maxnodes = -1;
 		softnodes = -1;
+		softtime = 0;
+		enableClock = true;
 	}
 	Limit(int64_t depth, int64_t ctime, int64_t movetime, Color color) : depth(depth), ctime(ctime), movetime(movetime), color(color) {
 		
 	}
 	// I will eventually fix this ugly code
-	// its just bad
 	void start(){
-		if (movetime == 0){
-			if (depth != 0){
-				//depth = 16;
-				movetime = 32000;
-			}
-			else {
-				movetime = ctime;
-				movetime /= 20;	
-			}
-		}
+		enableClock = movetime != 0 || ctime != 0;
 		if (depth == 0)
 			depth = MAX_PLY - 5;
+		if (enableClock)
+			softtime = 0;
+		if (ctime != 0){
+			// Calculate movetime
+			// this was like ~34 lol
+			movetime = ctime / 20 + inc / 2;
+			softtime = movetime * 0.63;
+		}
 		timer.start();
 	}
 	bool outOfNodes(int64_t cnt){
@@ -142,7 +144,12 @@ struct Limit {
 		return softnodes != -1 && cnt > softnodes;
 	}
 	bool outOfTime(){
-		return (maxnodes == -1 && static_cast<int64_t>(timer.elapsed()) >= movetime - 25);
+		return (enableClock && static_cast<int64_t>(timer.elapsed()) >= movetime - 15);
+	}
+	bool outOfTimeSoft(){
+		if (!enableClock || softtime == 0)
+			return false;
+		return (static_cast<int64_t>(timer.elapsed()) >= softtime);
 	}
 };
 //int search(Board &board, int depth, int ply, int alpha, int beta, Stack *ss, ThreadInfo &thread);

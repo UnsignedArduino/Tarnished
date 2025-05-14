@@ -340,6 +340,7 @@ namespace Search {
 		int oldnodecnt = 0;
 		double branchsum = 0;
 		double avgbranchfac = 0;
+		int64_t avgnps = 0;
 		for (int depth=1;depth<=limit.depth;depth++){
 			auto aborted = [&]() {
 				if (isMain)
@@ -389,6 +390,7 @@ namespace Search {
 				avgbranchfac = branchsum / (depth-1);
 				//std::cout << "Branching factor: " << (double)nodecnt / (double)oldnodecnt << " Average: " << avgbranch / (depth-1) << std::endl;
 			}
+			avgnps = threadInfo.nodes / (limit.timer.elapsed()+1);
 			oldnodecnt = threadInfo.nodes;
 			if (!isMain){
 				continue;
@@ -409,8 +411,11 @@ namespace Search {
 			std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
 			//UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
 			for (int i=0;i<lastPV.length;i++)
-				std::cout << lastPV.moves[i] << " ";
+				std::cout << uci::moveToUci(lastPV.moves[i]) << " ";
 			std::cout << std::endl;
+
+			if (limit.outOfTimeSoft())
+				break;
 
 		}
 		

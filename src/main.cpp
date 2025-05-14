@@ -97,7 +97,6 @@ void UCIPosition(Board &board, char *str) {
 
     // Loop over the moves and make them in succession
 
-
     char *move = strtok(str, " ");
     while ((move = strtok(NULL, " "))) {
 

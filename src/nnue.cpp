@@ -25,7 +25,7 @@ int32_t NNUE::SCReLU_(int16_t x){
 		return QA * QA;
 	return x * x;
 }
-// Thanks Prelude
+// Thanks Prelude and Turbulence
 // https://git.nocturn9x.space/Quinniboi10/Prelude/src/branch/main/src/nnue.cpp#L36
 #if defined(__x86_64__) || defined(__amd64__) || (defined(_WIN64) && (defined(_M_X64) || defined(_M_AMD64)))
 	#include <immintrin.h>
@@ -91,8 +91,6 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N> &STM, const std::a
 	const nativeVector VEC_QA   = set1_epi16(QA);
 	const nativeVector VEC_ZERO = set1_epi16(0);
 
-	// const std::array<int16_t, HL_N> &STM = col == Color::WHITE ? accumulatorI->white : accumulatorI->black;
-	// const std::array<int16_t, HL_N> &OPP = col == Color::BLACK ? accumulatorI->white : accumulatorI->black;
 
 	nativeVector accumulator{};
 	for (size_t i=0;i<HL_N;i+=VECTOR_SIZE){
@@ -122,8 +120,6 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N> &STM, const std::a
 
 int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N> &STM, const std::array<int16_t, HL_N> &OPP, Color col, size_t bucket){
 	int32_t eval = 0;
-	// const std::array<int16_t, HL_N> &STM = col == Color::WHITE ? accumulator->white : accumulator->black;
-	// const std::array<int16_t, HL_N> &OPP = col == Color::BLACK ? accumulator->white : accumulator->black;
 	for (int i=0;i<HL_N;i++){
 		eval += SCReLU_(STM[i]) * OW[bucket][i];
 		eval += SCReLU_(OPP[i]) * OW[bucket][HL_N+i];
@@ -147,7 +143,6 @@ void NNUE::load(const std::string &file){
 	}
 	for (int i=0;i<H1Bias.size();++i){
 		H1Bias[i] = readLittleEndian<int16_t>(stream);
-		//std::cout << "Bias " << H1Bias[i] << std::endl;
 	}
 	for (int i=0;i<OW.size(); ++i) {
 		for (int j=0;j<OW[i].size();j++)
@@ -204,7 +199,6 @@ int NNUE::inference(Board *board, Accumulator *accumulator){
 	}
 
 	eval += outputBias[outputBucket];
-	//printf("EVAL %lld\n", (eval * NNUE_SCALE) / (QA * QB));
 	return (eval * NNUE_SCALE) / (QA * QB);
 
 
@@ -248,9 +242,6 @@ void Accumulator::refresh(Board &board){
 		}
 	}
 
-	// for (int i=0;i<HL_N;i++){
-	// 	//std::cout << "STMw " << white[i] << " OPPb " << black[i] << std::endl;
-	// }
 }
 
 void Accumulator::print(){
@@ -306,33 +297,4 @@ void Accumulator::uncapture(Color stm, Square add1, PieceType addPT1, Square add
 		black[i] += network.H1[addB1 * HL_N + i] + network.H1[addB2 * HL_N + i] - network.H1[subB * HL_N + i];
 	}
 }
-
-// Castle Accumulation
-// void Accumulator::castle(Color stm, Square add1, PieceType addPT1, Square add2, PieceType addPT2, Square sub1, PieceType subPT1, Square sub2, PieceType subPT2){
-// 	const int addW1 = NNUE::feature(Color::WHITE, stm, addPT1, add1);
-// 	const int addB1 = NNUE::feature(Color::BLACK, stm, addPT1, add1);
-
-// 	const int addW2 = NNUE::feature(Color::WHITE, stm, addPT2, add2);
-// 	const int addB2 = NNUE::feature(Color::BLACK, stm, addPT2, add2);
-
-// 	const int subW1 = NNUE::feature(Color::WHITE, stm, subPT1, sub1);
-// 	const int subB1 = NNUE::feature(Color::BLACK, stm, subPT1, sub1);
-
-// 	const int subW2 = NNUE::feature(Color::WHITE, stm, subPT2, sub2);
-// 	const int subB2 = NNUE::feature(Color::BLACK, stm, subPT2, sub2);
-
-// 	for (int i=0;i<HL_N;i++){
-// 		white[i] += network.H1[addW1 * HL_N + i];
-// 		black[i] += network.H1[addB1 * HL_N + i];
-
-// 		white[i] += network.H1[addW2 * HL_N + i];
-// 		black[i] += network.H1[addB2 * HL_N + i];
-
-// 		white[i] -= network.H1[subW1 * HL_N + i];
-// 		black[i] -= network.H1[subB1 * HL_N + i];
-
-// 		white[i] -= network.H1[subW2 * HL_N + i];
-// 		black[i] -= network.H1[subB2 * HL_N + i];
-// 	}
-// }
 

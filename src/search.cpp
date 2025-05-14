@@ -2,6 +2,8 @@
 #include "searcher.h"
 #include "eval.h"
 #include "tt.h"
+#include "util.h"
+#include "parameters.h"
 
 #include <algorithm>
 #include <random>
@@ -13,6 +15,30 @@ using namespace chess;
 
 
 namespace Search {
+	std::array<std::array<std::array<int, 219>, MAX_PLY + 1>, 2> lmrTable;
+	void fillLmr(){
+		// Weiss formula for reductions is
+		// Captures/Promo: 0.2 + log(depth) * log(movecount) / 3.35
+		// Quiets: 		   1.35 + log(depth) * log(movecount) / 2.75
+		// https://git.nocturn9x.space/Quinniboi10/Prelude/src/commit/a35e41b51043fc2b68a72854f3db9638354f56d7/src/search.cpp#L13
+		// ~77 elo or smth
+		for (int isQuiet = 0;isQuiet<=1;isQuiet++){
+			for (size_t depth=0;depth <= MAX_PLY;depth++){
+				for (int movecount=0;movecount<=218;movecount++){
+					if (depth == 0 || movecount == 0){
+						lmrTable[isQuiet][depth][movecount] = 0;
+						continue;
+					}
+					if (isQuiet){
+						lmrTable[isQuiet][depth][movecount] = 1.35 + std::log(depth) * std::log(movecount) / 2.75;
+					}
+					else {
+						lmrTable[isQuiet][depth][movecount] = 0.2 + std::log(depth) * std::log(movecount) / 3.35;
+					}
+				}
+			}
+		}
+	}
 	int16_t scoreMove(Move &move, Move &ttMove, Move &killer, ThreadInfo &thread){
 		// MVV-LVA
 		// TT Move
@@ -47,7 +73,7 @@ namespace Search {
 				std::iter_swap(mvlst.begin() + start, mvlst.begin() + i);
 			}
 		}
-	}
+	}	
 	template<bool isPV>
 	int qsearch(int ply, int alpha, const int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
 		//bool isPV = alpha != beta - 1;
@@ -61,7 +87,7 @@ namespace Search {
 			return ttEntry->score;
 		}
 
-		int score = Evaluate(thread.board, thread.board.sideToMove());
+		int score = network.inference(&thread.board, &thread.accumulator);
 		if (ply >= MAX_PLY)
 			return score;
 		// if (isPV)
@@ -86,7 +112,7 @@ namespace Search {
 		for (int m_ = 0;m_<moves.size();m_++){
 			if (thread.abort.load(std::memory_order_relaxed))
 				return bestScore;
-			if (limit.outOfTime()){
+			if (limit.outOfTime() || limit.outOfNodes(thread.nodes)){
 				thread.abort.store(true, std::memory_order_relaxed);
 				return bestScore;
 			}
@@ -94,10 +120,12 @@ namespace Search {
 			pickMove(moves, m_);
 			Move move = moves[m_];
 
-			thread.board.makeMove(move);
+			//thread.board.makeMove(move);
+			MakeMove(thread.board, thread.accumulator, move);
 			thread.nodes++;
 			score = -qsearch<isPV>(ply+1, -beta, -alpha, ss+1, thread, limit);
-			thread.board.unmakeMove(move);
+			//thread.board.unmakeMove(move);
+			UnmakeMove(thread.board, thread.accumulator, move);
 
 			if (score > bestScore){
 				bestScore = score;
@@ -137,38 +165,61 @@ namespace Search {
 			&& (ttEntry->flag == TTFlag::EXACT 
 				|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= beta)
 				|| (ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= alpha))){
-			//thread.ttHits++;
 			return ttEntry->score;
 		}
+		bool hashMove = !ttHit || ttEntry->move == Move::NO_MOVE;
+
+		// http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
+    	// https://github.com/jhonnold/berserk/blob/dd1678c278412898561d40a31a7bd08d49565636/src/search.c#L379
+    	// https://github.com/PGG106/Alexandria/blob/debbf941889b28400f9a2d4b34515691c64dfae6/src/search.cpp#L636
+		bool canIIR = hashMove && depth >= IIR_MIN_DEPTH;
 
 		int bestScore = -INFINITE;
 		int score = bestScore;
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
-		int eval;
+		int eval = -INFINITE;
+
+		// Improving heurstic
+		// We are better than 2 plies ago
+		bool improving = improving = ply > 1 && (ss - 2)->staticEval < eval;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
 		if (isPV || inCheck)
 			goto move_loop;
 
 		// Pruning
-		eval = Evaluate(thread.board, thread.board.sideToMove());
+		eval = network.inference(&thread.board, &thread.accumulator);
+		ss->staticEval = eval;
 
-		// Reverse Futility Pruning
-		if (depth <= 6 && !root && eval - 80 * depth >= beta && std::abs(beta) < MATE)
-			return eval;
+		
+		if (!root && !isPV){
+			// Reverse Futility Pruning
+			if (eval - RFP_MARGIN * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH)
+				return eval;
 
-		// Null Move Pruning
-		if (depth >= 3 && eval >= beta){
-			thread.board.makeNullMove();
-			int nmpScore = -search<false>(depth-3, ply+1, -beta, -alpha, ss+1, thread, limit);
-			thread.board.unmakeNullMove();
-			if (nmpScore >= beta)
-				return nmpScore;
+			// Null Move Pruning
+			if (depth >= 3 && eval >= beta){
+				thread.board.makeNullMove();
+				int nmpScore = -search<false>(depth-3, ply+1, -beta, -alpha, ss+1, thread, limit);
+				thread.board.unmakeNullMove();
+				if (nmpScore >= beta)
+					return nmpScore;
+			}
 		}
+
+		
+		// Thought
+		// What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
+		// and use some sort of data generation method to create a pruning heuristic
+		// with something like sigmoid(C dot I) >= 0.75 ?
+
+		// Internal Iterative Reduction
+		if (canIIR)
+			depth -= 1;
 
 
 	move_loop:
-		Move bestMove = Move();
+		Move bestMove = Move::NO_MOVE;
 		Movelist moves;
 		Movelist seenQuiets;
 
@@ -178,13 +229,13 @@ namespace Search {
 		for (auto &move : moves){
 			move.setScore(scoreMove(move, ttEntry->move, ss->killer, thread));
 		}
-
+		bestMove = moves[0];
 		// Other vars
 		bool skipQuiets = false;
 		for (int m_ = 0;m_<moves.size();m_++){
 			if (thread.abort.load(std::memory_order_relaxed))
 				return bestScore;
-			if (limit.outOfTime()){
+			if (limit.outOfTime() || limit.outOfNodes(thread.nodes)){
 				thread.abort.store(true, std::memory_order_relaxed);
 				return bestScore;
 			}
@@ -198,22 +249,27 @@ namespace Search {
 				seenQuiets.add(move);
 
 			
-			if (bestScore > -INFINITE + MAX_PLY){
+			if (!root && bestScore > GETTING_MATED){
 				// Late Move Pruning
-				if (!skipQuiets && isQuiet && moveCount >= 6 * depth * depth){
-					skipQuiets = true;
-					continue;
-				}
+				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (improving+1))
+					break;
 			}
 
-			thread.board.makeMove<true>(move);
+			//thread.board.makeMove<true>(move);
+			MakeMove(thread.board, thread.accumulator, move);
+
+			// Extensions
+			//int extension = 0;
+			//bool givesCheck = thread.board.inCheck();
 			int newDepth = depth-1;
 			moveCount++;
 			thread.nodes++;
 
 			// Late Move Reduction
-			if (depth > 2 && moveCount > 2 && isQuiet && !thread.board.inCheck()){
-				score = -search<false>(newDepth-1, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && !thread.board.inCheck()){
+				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount] + !isPV;
+
+				score = -search<false>(newDepth-reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
 				if (score > alpha)
 					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
@@ -224,11 +280,14 @@ namespace Search {
 			if (isPV && (moveCount == 1 || score > alpha)){
 				score = -search<isPV>(newDepth, ply+1, -beta, -alpha, ss+1, thread, limit);
 			}
-			thread.board.unmakeMove(move);
+			//thread.board.unmakeMove(move);
+			UnmakeMove(thread.board, thread.accumulator, move);
 			if (score > bestScore){
 				bestScore = score;
 				if (score > alpha){
 					bestMove = move;
+					if (root)
+						thread.bestMove = bestMove;
 					ttFlag = TTFlag::EXACT;
 					alpha = score;
 					if (isPV){
@@ -241,12 +300,12 @@ namespace Search {
 				ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
 				// Butterfly History
 				if (isQuiet){
-					thread.updateHistory(thread.board.sideToMove(), move, 20 * depth * depth);
+					thread.updateHistory(thread.board.sideToMove(), move, BUTTERFLY_MULTIPLIER * depth * depth);
 				}
 				for (const Move quietMove : seenQuiets){
 					if (quietMove == move)
 						continue;
-					thread.updateHistory(thread.board.sideToMove(), quietMove, -20 * depth * depth);
+					thread.updateHistory(thread.board.sideToMove(), quietMove, -BUTTERFLY_MULTIPLIER * depth * depth);
 				}
 				break;
 			}
@@ -264,6 +323,8 @@ namespace Search {
 		//limit.start();
 		threadInfo.abort.store(false);
 		threadInfo.board = board;
+		threadInfo.accumulator.refresh(threadInfo.board);
+
 		// TODO set nodes and stuff too
 		bool isMain = threadInfo.type == ThreadType::MAIN;
 
@@ -275,56 +336,100 @@ namespace Search {
 		int score = -INFINITE;
 		int lastScore = -INFINITE;
 
+		int moveEval = -INFINITE;
+		int oldnodecnt = 0;
+		double branchsum = 0;
+		double avgbranchfac = 0;
+		int64_t avgnps = 0;
 		for (int depth=1;depth<=limit.depth;depth++){
-			
 			auto aborted = [&]() {
 				if (isMain)
-					return limit.outOfTime() || threadInfo.abort.load(std::memory_order_relaxed);
+					return limit.outOfTime() || limit.outOfNodes(threadInfo.nodes) || limit.softNodes(threadInfo.nodes) || threadInfo.abort.load(std::memory_order_relaxed);
 				else
-					return threadInfo.abort.load(std::memory_order_relaxed);
+					return limit.softNodes(threadInfo.nodes) || threadInfo.abort.load(std::memory_order_relaxed);
 			};
 			// Aspiration Windows (WIP)
-			if (false){
-				// int delta = 12; // 12 probably gains
-				// int alpha  = std::max(lastScore - delta, -INFINITE);
-				// int beta = std::max(lastScore + delta, INFINITE);
-				// while (!aborted()){
-				// 	score = search<true>(depth, 0, alpha, beta, ss, threadInfo, limit);
-				// 	if (score <= alpha || score >= beta) {
-				// 		alpha = -INFINITE;
-				// 		beta = INFINITE;
-				// 	}
-				// 	else
-				// 		break;
-				// }
+			if (depth >= MIN_ASP_WINDOW_DEPTH){
+				int delta = INITIAL_ASP_WINDOW;
+				int alpha  = std::max(lastScore - delta, -INFINITE);
+				int beta = std::min(lastScore + delta, INFINITE);
+				int aspDepth = depth;
+				while (!aborted()){
+					score = search<true>(std::max(aspDepth, 1), 0, alpha, beta, ss, threadInfo, limit);
+					if (score <= alpha){
+						beta = (alpha + beta) / 2;
+						alpha = std::max(alpha - delta, -INFINITE);
+						aspDepth = depth;
+					}
+					else {
+						if (score >= beta){
+							beta = std::min(beta + delta, INFINITE);
+							aspDepth = std::max(aspDepth-1, depth-5);
+						}
+						else
+							break;
+					}
+					delta += delta * ASP_WIDENING_FACTOR / 16;
+				}
 			}
 			else
 				score = search<true>(depth, 0, -INFINITE, INFINITE, ss, threadInfo, limit);
 			// ---------------------
-			
-			if (depth != 1 && aborted())
+			//std::cout << "Depth " << depth << " Nodes " << threadInfo.nodes << " Hard " << limit.outOfNodes(threadInfo.nodes) << " soft " << limit.softNodes(threadInfo.nodes) << std::endl;
+			//std::cout << threadInfo.board.getFen() << std::endl;
+			if (depth != 1 && aborted()){
 				break;
+			}
 
 			lastScore = score;
-
-			if (!isMain)
-				continue;
 			lastPV = ss->pv;
+
+			// Maybe useful info for diagnostics
+			if (oldnodecnt != 0){
+				branchsum += (double)threadInfo.nodes / oldnodecnt;
+				avgbranchfac = branchsum / (depth-1);
+				//std::cout << "Branching factor: " << (double)nodecnt / (double)oldnodecnt << " Average: " << avgbranch / (depth-1) << std::endl;
+			}
+			avgnps = threadInfo.nodes / (limit.timer.elapsed()+1);
+			oldnodecnt = threadInfo.nodes;
+			if (!isMain){
+				continue;
+			}
 
 			// Reporting
 			uint64_t nodecnt = (*searcher).nodeCount();
-			threadInfo.board.makeMove(lastPV.moves[0]);
-			std::cout << "info depth " << depth << " score cp " << Evaluate(threadInfo.board, ~threadInfo.board.sideToMove()) << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
-			threadInfo.board.unmakeMove(lastPV.moves[0]);
+			
+			// MakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
+			// moveEval = network.inference(&threadInfo.board, &threadInfo.accumulator);
+			std::cout << "info depth " << depth << " score ";
+			if (score >= FOUND_MATE || score <= GETTING_MATED){
+				std::cout << "mate " << ((score < 0) ? "-" : "") << (MATE - std::abs(score)) / 2 + 1;
+			}
+			else
+				std::cout << "cp " << score;
+
+			std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
+			//UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
 			for (int i=0;i<lastPV.length;i++)
-				std::cout << lastPV.moves[i] << " ";
+				std::cout << uci::moveToUci(lastPV.moves[i]) << " ";
 			std::cout << std::endl;
+
+			if (limit.outOfTimeSoft())
+				break;
+
 		}
+		
 		if (isMain){
 			std::cout << "bestmove " << uci::moveToUci(lastPV.moves[0]) << std::endl;
 		}
 		threadInfo.abort.store(true, std::memory_order_relaxed);
-		return score;
+
+		threadInfo.bestMove = lastPV.moves[0];
+		//std::cout << "PRE EVAL ITER DEEP " << threadInfo.bestMove << std::endl;
+		// MakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
+		// moveEval = network.inference(&threadInfo.board, &threadInfo.accumulator);
+		// UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
+		return lastScore;
 	}
 
 	// Benchmark for OpenBench

@@ -10,6 +10,8 @@ ifeq ($(OS), Windows_NT)
 	EXE_SUFFIX = .exe
 endif
 
+EVALFILE ?= network/latest.bin
+
 SOURCES := src/*.cpp
 CXX := clang++
 CXXFLAGS := -std=c++20 -O3 -flto -DNDEBUG -march=native

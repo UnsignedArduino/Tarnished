@@ -1,36 +1,30 @@
 
-# Tarnished
-UCI Chess Engine written in C++
 
-The name is a reference to a certain video game protagonist
 
-As of right now, all tests have been conducted on my personal PC with the use of [cutechess-cli](https://github.com/cutechess/cutechess/tree/master) but will eventually migrate to [OpenBench](https://github.com/AndyGrant/OpenBench)
+<p align="center">
+</p>
+<h1 align="center">Tarnished</h1>
 
-HCE evaluation values were taken from my microcontroller chess engine [MemorixV2](https://github.com/Bobingstern/MemorixV2) which were computed via [Texel-Tuning](https://github.com/AndyGrant/Ethereal/blob/master/Tuning.pdf)
+UCI Chess Engine written in C++ featuring NNUE evaluation trained from scratch. The name is a reference to a certain video game protagonist
 
-## Strength
-So far, Tarnished can defeat [Stash-19.0](https://gitlab.com/mhouppin/stash-bot) at `8+0.08` and `40+0.4` time controls which is estimated ~2471 CCRL Blitz. These are the results on an `Intel(R) Core(TM) i7-10700F`
+As of right now, all tests and data generation have been conducted on my personal PCs with the use of [cutechess-cli](https://github.com/cutechess/cutechess/tree/master) but will eventually migrate to [OpenBench](https://github.com/AndyGrant/OpenBench)
 
-`Engine | tarnished vs stash-19.0`
-
+## Estimated Strength
+So far, Tarnished can defeat [stash-30](https://github.com/mhouppin/stash-bot) at `40+0.4` which is estimated ~3160 on CCRL. This is not definitive and will be updated when Tarnished gets an official CCRL estimate. Tests were run on an `Intel(R) Core(TM) i7-10700F`. Here are the results after around 750 games
 ```
-TC     | 8+0.08
-Elo    | 35.0 +- 19.7
-Games  | N: 995 W: 462 L: 363 D: 171 [0.550]
+Engine     | tarnished vs stash-30.0
+TC         | 40+0.04
+Elo        | 37.9 +/- 19.8
+Games      | N: 746 W: 274 L: 193 D: 279 [0.554]
 ```
-```
-TC     | 40+0.4
-Elo    | 17.1 +- 13.8
-Games  | N: 1950 W: 830 L: 734 D: 386 [0.525]
-``` 
 
-## Usage
-It seems like the `Makefile` is slightly faster than using `CMake` but you may use whichever one you wish 
+## Building
+It seems like the `Makefile` is slightly faster than using `CMake` but you may use whichever one you wish. Make sure to have an NNUE file under `network/latest.bin` if you plan on building the project. Tarnished makes use of [incbin](https://github.com/graphitemaster/incbin) to embed the file into the executable itself, removing the need to carry an external network along with it. To build with `make` you may 
 1. Clone the repository.
 2. `make`
 3. Binary is at `tarnished.exe`
 
-Alternatively,
+Alternatively, with `CMake`
 
 1. Clone the repository.
 2. `mkdir build && cd build`
@@ -42,18 +36,17 @@ Alternatively,
 
 - Move Generation
     - Internally uses [chess-library](https://disservin.github.io/chess-library/)
-- Evaluation
-    - Tapered Evaluation
-    - Piece Square Tables
-    - Mobility Bonus
-    - King Line Danger (inspired by Weiss)
-    - King Threats
-    - Bishop Pair
-    - Tempo Bonus
+- NNUE `(768->128)x2->1x8`
+    - Trained with [bullet](https://github.com/jw1912/bullet)
+    - Self generated training data
+    - `(piece, square, color)` input features, 8 output buckets
+    - 5000 soft nodes for self play
+    - 8 random plies for opening
 - Search
     - Principle Variation Search
     - Quiescence Search
     - Iterative Deepening
+    - Aspiration Windows
     - Shared Transposition Table
     - Move Ordering
         - MVV-LVA
@@ -63,9 +56,11 @@ Alternatively,
     - Selectivity
         - Reverse Futility Pruning
         - Null Move Pruning
+        - Improving Heuristic
         - Late Move Reductions
         - Late Move Pruning
         - Terminal Conditions (Mate, Stalemate, 3fold...)
+        - Internal Iterative Reductions
  - Misc
      - Lazy SMP (functional but not tested thoroughly)
 
@@ -75,12 +70,21 @@ Alternatively,
     - Prints out the board, side to move, castling rights, Zobrist Hash, etc
 - `eval`
     - Prints the current position's static evaluation for the side to move
+- `go softnodes <nodes>`
+    - Start search with a soft node limit (only checked once per iteration of deepening)
 - `bench`
     - Runs an OpenBench style benchmark on 50 positions. Alternatively run `./tarnished bench`
+ - `datagen name Threads value <threads>`
+     - Begins data generation with the specified number of threads with viriformat output files.
+     - It should create a folder with `<threads>` number of `.vf` files. If you're on windows, you can run `copy /b *.vf output.vf` to merge them all into one file for training.
+     - Hyperthreading seems to be somewhat profitable
+     - Send me your data!
 
 ## Credits
 - Stockfish Discord Server
 - [Weiss](https://github.com/TerjeKir/Weiss)
 - [Stash](https://github.com/mhouppin/stash-bot)
-- [Sirius](https://github.com/mcthouacbb/Sirius)
-- [Prelude](https://git.nocturn9x.space/Quinniboi10/Prelude)
+- [Sirius](https://github.com/mcthouacbb/Sirius) 
+- [Stormphrax](https://github.com/Ciekce/Stormphrax) (Ciekce is the goat)
+- [Prelude](https://git.nocturn9x.space/Quinniboi10/Prelude) (Especially for base NNUE code)
+- [Bullet](https://github.com/jw1912/bullet)

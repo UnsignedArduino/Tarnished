@@ -21,8 +21,7 @@ enum InputCommands {
     BENCH       = 99,
     EVAL        = 26,
     PRINT       = 112,
-    PERFT       = 116,
-    MIRRORTEST  = 4
+    DATAGEN     = 124
 };
 
 bool GetInput(char *str) {

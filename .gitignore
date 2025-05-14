@@ -34,6 +34,7 @@
 # Build products
 build
 cmake-build-*
+data
 
 # Other stuff
 *.epd

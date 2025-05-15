@@ -11,7 +11,7 @@
 #include "uci.h"
 #include "timeman.h"
 #include "datagen.h"
-
+#include "util.h"
 
 using namespace chess;
 using namespace std::chrono;
@@ -165,7 +165,7 @@ void BeginDatagen(char *str){
 
 int main(int agrc, char *argv[]){
     //r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1
-
+    initLookups();
 	Board board = Board();
 
     //network.randomize();

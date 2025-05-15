@@ -99,6 +99,8 @@ namespace Search {
 			alpha = score;
 
 		int bestScore = score;
+		int moveCount = 0;
+		bool inCheck = thread.board.inCheck();
 
 		Movelist moves;
 		movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, thread.board);
@@ -116,15 +118,20 @@ namespace Search {
 				thread.abort.store(true, std::memory_order_relaxed);
 				return bestScore;
 			}
-
+			
+			// Move ordering
 			pickMove(moves, m_);
 			Move move = moves[m_];
 
-			//thread.board.makeMove(move);
+			// SEE Pruning
+			if (bestScore > -GETTING_MATED && !SEE(thread.board, move, 0))
+				continue;
+
+
 			MakeMove(thread.board, thread.accumulator, move);
 			thread.nodes++;
+			moveCount++;
 			score = -qsearch<isPV>(ply+1, -beta, -alpha, ss+1, thread, limit);
-			//thread.board.unmakeMove(move);
 			UnmakeMove(thread.board, thread.accumulator, move);
 
 			if (score > bestScore){

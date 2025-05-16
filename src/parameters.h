@@ -17,6 +17,16 @@ constexpr int NMP_BASE_REDUCTION = 3;
 constexpr int NMP_REDUCTION_SCALE = 4;
 constexpr int NMP_EVAL_SCALE = 200;
 
+// constexpr int SE_MIN_DEPTH = 8;
+// constexpr int SE_BETA_SCALE = 32;
+// constexpr int SE_DOUBLE_MARGIN = 32;
+
+constexpr int HIST_PRUNING_DEPTH = 5;
+constexpr int HIST_BASE_THRESHOLD = -380;
+constexpr int HIST_MULT_THRESHOLD = -2000;
+constexpr int HIST_CAPTURE_BASE_THRESHOLD = -500;
+constexpr int HIST_CAPTURE_MULT_THRESHOLD = -1700;
+
 constexpr int LMR_MIN_DEPTH = 2;
 
 constexpr int BUTTERFLY_MULTIPLIER = 20;

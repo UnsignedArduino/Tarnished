@@ -43,6 +43,7 @@ struct ThreadInfo {
 	std::atomic<uint64_t> nodes;
 	Move bestMove;
 	int minNmpPly;
+	int rootDepth;
 
 	std::array<std::array<std::array<int, 64>, 64>, 2> history;
 	//uint64_t ttHits;
@@ -54,9 +55,11 @@ struct ThreadInfo {
 		nodes = 0;
 		bestMove = Move::NO_MOVE;
 		minNmpPly = 0;
+		rootDepth = 0;
 		//ttHits = 0;
 	}
-	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history), bestMove(other.bestMove), minNmpPly(other.minNmpPly) {
+	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history), 
+											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth) {
 		this->board = other.board;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}
@@ -98,6 +101,7 @@ struct Stack {
     PVList pv;
     chess::Move killer;
     int    staticEval;
+    int historyScore;
 };
 
 struct Limit {
@@ -120,6 +124,7 @@ struct Limit {
 		softnodes = -1;
 		softtime = 0;
 		enableClock = true;
+		inc = 0;
 	}
 	Limit(int64_t depth, int64_t ctime, int64_t movetime, Color color) : depth(depth), ctime(ctime), movetime(movetime), color(color) {
 		
@@ -134,8 +139,9 @@ struct Limit {
 		if (ctime != 0){
 			// Calculate movetime
 			// this was like ~34 lol
-			movetime = ctime / 20 + inc / 2;
+			movetime = ctime / (inc <= 0 ? 30 : 20) + inc / 2;
 			softtime = movetime * 0.63;
+			movetime -= 15;
 		}
 		timer.start();
 	}
@@ -146,7 +152,7 @@ struct Limit {
 		return softnodes != -1 && cnt > softnodes;
 	}
 	bool outOfTime(){
-		return (enableClock && static_cast<int64_t>(timer.elapsed()) >= movetime - 15);
+		return (enableClock && static_cast<int64_t>(timer.elapsed()) >= movetime);
 	}
 	bool outOfTimeSoft(){
 		if (!enableClock || softtime == 0)

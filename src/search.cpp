@@ -264,7 +264,7 @@ namespace Search {
 		for (int m_ = 0;m_<moves.size();m_++){
 			if (thread.abort.load(std::memory_order_relaxed))
 				return bestScore;
-			if (limit.outOfTime() || limit.outOfNodes(thread.nodes)){
+			if ( (limit.outOfTime() || limit.outOfNodes(thread.nodes)) && thread.rootDepth != 1 ){
 				thread.abort.store(true, std::memory_order_relaxed);
 				return bestScore;
 			}
@@ -282,15 +282,27 @@ namespace Search {
 				// Late Move Pruning
 				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (improving+1))
 					break;
+
+				// History Pruning
+				// https://github.com/aronpetko/integral/blob/733036df88408d0d6338d05f7991f46f0527ed4f/src/engine/search/search.cc#L945
+				// const int historyMargin = isQuiet ? HIST_BASE_THRESHOLD + HIST_MULT_THRESHOLD * depth;
+				// 								: HIST_CAPTURE_BASE_THRESHOLD + HIST_CAPTURE_MULT_THRESHOLD * depth;
+
+				// if (depth <= HIST_PRUNING_DEPTH && ss->historyScore <= historyMargin){
+				// 	skipQuiets = true;
+				// 	continue;
+				// }
 			}
 
 			//thread.board.makeMove<true>(move);
 			MakeMove(thread.board, thread.accumulator, move);
 
-			// Extensions
-			//int extension = 0;
-			//bool givesCheck = thread.board.inCheck();
-			int newDepth = depth-1;
+			// Check Extensions
+			// bool givesCheck = thread.board.inCheck();
+			// if (!doSE && givesCheck)
+			// 	extension = 1;
+
+			int newDepth = depth - 1;
 			moveCount++;
 			thread.nodes++;
 
@@ -377,6 +389,7 @@ namespace Search {
 				else
 					return limit.softNodes(threadInfo.nodes) || threadInfo.abort.load(std::memory_order_relaxed);
 			};
+			threadInfo.rootDepth = depth;
 			// Aspiration Windows (WIP)
 			if (depth >= MIN_ASP_WINDOW_DEPTH){
 				int delta = INITIAL_ASP_WINDOW;

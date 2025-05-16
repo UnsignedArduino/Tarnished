@@ -264,7 +264,7 @@ namespace Search {
 		for (int m_ = 0;m_<moves.size();m_++){
 			if (thread.abort.load(std::memory_order_relaxed))
 				return bestScore;
-			if (limit.outOfTime() || limit.outOfNodes(thread.nodes)){
+			if ( (limit.outOfTime() || limit.outOfNodes(thread.nodes)) && thread.rootDepth != 1 ){
 				thread.abort.store(true, std::memory_order_relaxed);
 				return bestScore;
 			}
@@ -282,26 +282,18 @@ namespace Search {
 				// Late Move Pruning
 				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (improving+1))
 					break;
+
+				// History Pruning
+				// https://github.com/aronpetko/integral/blob/733036df88408d0d6338d05f7991f46f0527ed4f/src/engine/search/search.cc#L945
+				// const int historyMargin = isQuiet ? HIST_BASE_THRESHOLD + HIST_MULT_THRESHOLD * depth;
+				// 								: HIST_CAPTURE_BASE_THRESHOLD + HIST_CAPTURE_MULT_THRESHOLD * depth;
+
+				// if (depth <= HIST_PRUNING_DEPTH && ss->historyScore <= historyMargin){
+				// 	skipQuiets = true;
+				// 	continue;
+				// }
 			}
 
-			// Singular Extensions
-			bool doSE = !root && ply < 2 * thread.rootDepth && depth >= SE_MIN_DEPTH
-						&& ttHit && move == ttEntry->move && ttEntry->depth >= depth - 3
-						&& ttEntry->flag != TTFlag::FAIL_LOW;
-			int extension = 0;
-			if (doSE) {
-				int sBeta = std::max(-INFINITE+1, ttEntry->score - SE_BETA_SCALE * depth / 16);
-				int sDepth = (depth - 1) / 2;
-				const int seScore = search<false>(sDepth, ply+1, sBeta-1, sBeta, ss+1, thread, limit);
-				if (seScore < sBeta){
-					if (!isPV && score < sBeta - SE_DOUBLE_MARGIN)
-						extension = 2;
-					else
-						extension = 1;
-				}
-				else if (ttEntry->score >= beta)
-					extension = -2 + isPV;
-			}
 			//thread.board.makeMove<true>(move);
 			MakeMove(thread.board, thread.accumulator, move);
 
@@ -310,7 +302,7 @@ namespace Search {
 			// if (!doSE && givesCheck)
 			// 	extension = 1;
 
-			int newDepth = depth - 1 + extension;
+			int newDepth = depth - 1;
 			moveCount++;
 			thread.nodes++;
 

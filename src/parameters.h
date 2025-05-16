@@ -17,6 +17,10 @@ constexpr int NMP_BASE_REDUCTION = 3;
 constexpr int NMP_REDUCTION_SCALE = 4;
 constexpr int NMP_EVAL_SCALE = 200;
 
+constexpr int SE_MIN_DEPTH = 6;
+constexpr int SE_BETA_SCALE = 8;
+constexpr int SE_DOUBLE_MARGIN = 12;
+
 constexpr int LMR_MIN_DEPTH = 2;
 
 constexpr int BUTTERFLY_MULTIPLIER = 20;

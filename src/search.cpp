@@ -284,13 +284,33 @@ namespace Search {
 					break;
 			}
 
+			// Singular Extensions
+			bool doSE = !root && ply < 2 * thread.rootDepth && depth >= SE_MIN_DEPTH
+						&& ttHit && move == ttEntry->move && ttEntry->depth >= depth - 3
+						&& ttEntry->flag != TTFlag::FAIL_LOW;
+			int extension = 0;
+			if (doSE) {
+				int sBeta = std::max(-INFINITE+1, ttEntry->score - SE_BETA_SCALE * depth / 16);
+				int sDepth = (depth - 1) / 2;
+				const int seScore = search<false>(sDepth, ply+1, sBeta-1, sBeta, ss+1, thread, limit);
+				if (seScore < sBeta){
+					if (!isPV && score < sBeta - SE_DOUBLE_MARGIN)
+						extension = 2;
+					else
+						extension = 1;
+				}
+				else if (ttEntry->score >= beta)
+					extension = -2 + isPV;
+			}
 			//thread.board.makeMove<true>(move);
 			MakeMove(thread.board, thread.accumulator, move);
 
-			// Extensions
-			//int extension = 0;
-			//bool givesCheck = thread.board.inCheck();
-			int newDepth = depth-1;
+			// Check Extensions
+			// bool givesCheck = thread.board.inCheck();
+			// if (!doSE && givesCheck)
+			// 	extension = 1;
+
+			int newDepth = depth - 1 + extension;
 			moveCount++;
 			thread.nodes++;
 
@@ -377,6 +397,7 @@ namespace Search {
 				else
 					return limit.softNodes(threadInfo.nodes) || threadInfo.abort.load(std::memory_order_relaxed);
 			};
+			threadInfo.rootDepth = depth;
 			// Aspiration Windows (WIP)
 			if (depth >= MIN_ASP_WINDOW_DEPTH){
 				int delta = INITIAL_ASP_WINDOW;

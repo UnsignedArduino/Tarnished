@@ -13,6 +13,10 @@ constexpr int OUTPUT_BUCKETS = 8;
 constexpr int RFP_MARGIN = 80;
 constexpr int RFP_MAX_DEPTH = 6;
 
+constexpr int NMP_BASE_REDUCTION = 3;
+constexpr int NMP_REDUCTION_SCALE = 4;
+constexpr int NMP_EVAL_SCALE = 200;
+
 constexpr int LMR_MIN_DEPTH = 2;
 
 constexpr int BUTTERFLY_MULTIPLIER = 20;

@@ -53,6 +53,7 @@ Alternatively, with `CMake`
         - TT Move
         - Killer Move Heuristic 
         - Butterfly History Heuristic
+        - SEE Move Ordering
     - Selectivity
         - Reverse Futility Pruning
         - Null Move Pruning

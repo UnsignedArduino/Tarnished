@@ -14,7 +14,7 @@ EVALFILE ?= network/latest.bin
 
 SOURCES := src/*.cpp
 CXX := clang++
-CXXFLAGS := -std=c++20 -O3 -flto -DNDEBUG -march=native
+CXXFLAGS := -O3 -march=native -ffast-math -fno-finite-math-only -funroll-loops -flto -fuse-ld=lld -std=c++20 -static -DNDEBUG -pthread
 
 $(EXE)$(EXE_SUFFIX): $(SOURCES)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(SOURCES) -o $(EXE)$(EXE_SUFFIX)

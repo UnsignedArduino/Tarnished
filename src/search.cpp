@@ -16,6 +16,14 @@ using namespace chess;
 
 namespace Search {
 	std::array<std::array<std::array<int, 219>, MAX_PLY + 1>, 2> lmrTable;
+
+	bool isWin(int score){
+		return score >= FOUND_MATE;
+	}
+
+	bool isLoss(int score){
+		return score <= GETTING_MATED;
+	}
 	void fillLmr(){
 		// Weiss formula for reductions is
 		// Captures/Promo: 0.2 + log(depth) * log(movecount) / 3.35
@@ -124,7 +132,7 @@ namespace Search {
 			Move move = moves[m_];
 
 			// SEE Pruning
-			if (bestScore > -GETTING_MATED && !SEE(thread.board, move, 0))
+			if (bestScore > GETTING_MATED && !SEE(thread.board, move, 0))
 				continue;
 
 
@@ -189,7 +197,7 @@ namespace Search {
 
 		// Improving heurstic
 		// We are better than 2 plies ago
-		bool improving = improving = ply > 1 && (ss - 2)->staticEval < eval;
+		bool improving = !inCheck && ply > 1 && (ss - 2)->staticEval < eval;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
 		if (isPV || inCheck)
 			goto move_loop;
@@ -205,12 +213,26 @@ namespace Search {
 				return eval;
 
 			// Null Move Pruning
-			if (depth >= 3 && eval >= beta){
+			Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^ thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
+			if (depth >= 2 && eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()){
+				// Sirius formula
+				const int reduction = NMP_BASE_REDUCTION + depth / NMP_REDUCTION_SCALE + std::min(2, (eval-beta)/NMP_EVAL_SCALE);
 				thread.board.makeNullMove();
-				int nmpScore = -search<false>(depth-3, ply+1, -beta, -alpha, ss+1, thread, limit);
+				int nmpScore = -search<false>(depth-reduction, ply+1, -beta, -beta + 1, ss+1, thread, limit);
 				thread.board.unmakeNullMove();
-				if (nmpScore >= beta)
-					return nmpScore;
+				if (nmpScore >= beta){
+					// Zugzwang verifiction
+					// All "real" moves are bad, so doing a null causes a cutoff
+					// do a reduced search to verify and if that also fails high
+					// then all is well, else dont prune
+					if (depth <= 15 || thread.minNmpPly > 0)
+						return isWin(nmpScore) ? beta : nmpScore;
+					thread.minNmpPly = ply + (depth - reduction) * 3 / 4;
+					int verification = search<false>(depth-NMP_BASE_REDUCTION, ply+1, beta-1, beta, ss+1, thread, limit);
+					thread.minNmpPly = 0;
+					if (verification >= beta)
+						return verification;
+				}
 			}
 		}
 

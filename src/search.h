@@ -42,6 +42,7 @@ struct ThreadInfo {
 	Accumulator accumulator;
 	std::atomic<uint64_t> nodes;
 	Move bestMove;
+	int minNmpPly;
 
 	std::array<std::array<std::array<int, 64>, 64>, 2> history;
 	//uint64_t ttHits;
@@ -52,9 +53,10 @@ struct ThreadInfo {
 		std::memset(&history, 0, sizeof(history));
 		nodes = 0;
 		bestMove = Move::NO_MOVE;
+		minNmpPly = 0;
 		//ttHits = 0;
 	}
-	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history), bestMove(other.bestMove) {
+	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history), bestMove(other.bestMove), minNmpPly(other.minNmpPly) {
 		this->board = other.board;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}

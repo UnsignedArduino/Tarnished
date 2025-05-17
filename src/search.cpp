@@ -47,7 +47,7 @@ namespace Search {
 			}
 		}
 	}
-	int16_t scoreMove(Move &move, Move &ttMove, Stack *ss, ThreadInfo &thread){
+	int scoreMove(Move &move, Move &ttMove, Stack *ss, ThreadInfo &thread){
 		// MVV-LVA
 		// TT Move
 		// Killer Move Heuristic
@@ -55,30 +55,27 @@ namespace Search {
 
 		PieceType to = thread.board.at<PieceType>(move.to());
 		if (move == ttMove){
-			return 32511 + 60;
+			return 1000000;
 		}
 		else if (to != PieceType::NONE) {
 			// Max 16 bit int - 256 + MVVLVA
 			// https://rustic-chess.org/search/ordering/killers.html
-			return 32511 + MVVLVA[to][thread.board.at<PieceType>(move.from())];
+			return 500000 + MVVLVA[to][thread.board.at<PieceType>(move.from())];
 		}
 		else if (move == ss->killer){
-			return 32511 - 10;
+			return 400000;
 		}
 		else {
 			// Quiet non killers
-			// main history + continuation history
-			int16_t his = thread.getHistory(thread.board.sideToMove(), move);
-			//std::cout << "Main history value " << his << std::endl;
+			// main history + continuation history ~10 1ply
+			int his = thread.getHistory(thread.board.sideToMove(), move);
 			if (ss != nullptr && (ss-1)->conthist != nullptr)
 				his += thread.getConthist((ss-1)->conthist, thread.board, move);
 			// if (ss != nullptr && (ss-2)->conthist != nullptr)
 			// 	his += thread.getConthist((ss-2)->conthist, thread.board, move);
-			assert(his < MAX_HISTORY);
-			//std::cout << "ContHistory sum value " << his << std::endl;
 			return his;
 		}
-		return 0;
+		return -1000000;
 	}
 	bool scoreComparator(Move &a, Move &b){
 		return a.score() > b.score();

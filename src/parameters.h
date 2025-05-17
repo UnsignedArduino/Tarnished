@@ -18,6 +18,7 @@ constexpr int NMP_BASE_REDUCTION = 3;
 constexpr int NMP_REDUCTION_SCALE = 4;
 constexpr int NMP_EVAL_SCALE = 200;
 
+constexpr int SEE_ORDERING_MARGIN = -100;
 // constexpr int SE_MIN_DEPTH = 8;
 // constexpr int SE_BETA_SCALE = 32;
 // constexpr int SE_DOUBLE_MARGIN = 32;

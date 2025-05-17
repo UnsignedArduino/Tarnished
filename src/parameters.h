@@ -1,6 +1,7 @@
 #pragma once
 
-
+constexpr int16_t MAX_HISTORY = 16383;
+const int16_t DEFAULT_HISTORY = 0;
 // NNUE Parameters
 
 constexpr int16_t HL_N = 128;
@@ -29,7 +30,7 @@ constexpr int HIST_CAPTURE_MULT_THRESHOLD = -1700;
 
 constexpr int LMR_MIN_DEPTH = 2;
 
-constexpr int BUTTERFLY_MULTIPLIER = 20;
+constexpr int HISTORY_QUADRATIC_BONUS = 20;
 
 constexpr int IIR_MIN_DEPTH = 6;
 

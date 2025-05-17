@@ -4,6 +4,8 @@
 #include "tt.h"
 #include "timeman.h"
 #include "nnue.h"
+#include "parameters.h"
+#include "util.h"
 #include <atomic>
 #include <cstring>
 #include <thread>
@@ -12,7 +14,7 @@
 using namespace chess;
 
 #define MAX_PLY 125
-#define BENCH_DEPTH 9
+#define BENCH_DEPTH 12
 
 const int MVVLVA[7][7] = {
     {15, 14, 13, 12, 11, 10, 0}, // Victim P, attacker P, N, B, R, Q, K, None
@@ -23,6 +25,7 @@ const int MVVLVA[7][7] = {
     {0,  0,  0,  0,  0,  0,  0}  // Victim None, attacker P, N, B, R, Q, K, None
 };
 
+
 enum ThreadType {
     MAIN      = 1,
     SECONDARY = 0
@@ -31,53 +34,6 @@ enum ThreadType {
 struct Searcher;
 
 namespace Search {
-
-void fillLmr();
-
-struct ThreadInfo {
-	ThreadType type;
-	TTable &TT;
-	std::atomic<bool> &abort;
-	Board board;
-	Accumulator accumulator;
-	std::atomic<uint64_t> nodes;
-	Move bestMove;
-	int minNmpPly;
-	int rootDepth;
-
-	std::array<std::array<std::array<int, 64>, 64>, 2> history;
-	//uint64_t ttHits;
-
-	ThreadInfo(ThreadType type, TTable &TT, std::atomic<bool> &abort) : type(type), TT(TT), abort(abort) {
-		abort.store(false, std::memory_order_relaxed);
-		this->board = Board();
-		std::memset(&history, 0, sizeof(history));
-		nodes = 0;
-		bestMove = Move::NO_MOVE;
-		minNmpPly = 0;
-		rootDepth = 0;
-		//ttHits = 0;
-	}
-	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history), 
-											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth) {
-		this->board = other.board;
-		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
-	}
-	void updateHistory(Color c, Move m, int bonus){
-		int clamped = std::clamp(bonus, -16384, 16384);
-		history[(int)c][m.from().index()][m.to().index()] += clamped - history[(int)c][m.from().index()][m.to().index()] * std::abs(clamped) / 16384;
-	}
-	int getHistory(Color c, Move m){
-		return history[(int)c][m.from().index()][m.to().index()];
-	}
-	void reset(){
-		nodes.store(0, std::memory_order_relaxed);
-		bestMove = Move::NO_MOVE;
-		for (auto &i : history)
-			for (auto &j : i)
-				j.fill(0);
-	}
-};
 
 struct PVList {
 	std::array<chess::Move, MAX_PLY> moves;
@@ -97,12 +53,85 @@ struct PVList {
 	}
 };
 
+
 struct Stack {
     PVList pv;
     chess::Move killer;
     int    staticEval;
     int historyScore;
+    MultiArray<int16_t, 64, 6, 2> *conthist;
 };
+
+void fillLmr();
+
+struct ThreadInfo {
+	ThreadType type;
+	TTable &TT;
+	std::atomic<bool> &abort;
+	Board board;
+	Accumulator accumulator;
+	std::atomic<uint64_t> nodes;
+	Move bestMove;
+	int minNmpPly;
+	int rootDepth;
+
+	std::array<std::array<std::array<int, 64>, 64>, 2> history;
+	// indexed by [prev stm][prev pt][prev to][stm][pt][to]
+	MultiArray<int16_t, 64, 6, 2, 64, 6, 2> conthist;
+	//uint64_t ttHits;
+
+	ThreadInfo(ThreadType type, TTable &TT, std::atomic<bool> &abort) : type(type), TT(TT), abort(abort) {
+		abort.store(false, std::memory_order_relaxed);
+		this->board = Board();
+		std::memset(&history, 0, sizeof(history));
+		conthist.fill(DEFAULT_HISTORY);
+		nodes = 0;
+		bestMove = Move::NO_MOVE;
+		minNmpPly = 0;
+		rootDepth = 0;
+		//ttHits = 0;
+	}
+	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history), 
+											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth) {
+		this->board = other.board;
+		conthist = other.conthist;
+		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
+	}
+	void updateHistory(Color c, Move m, int bonus){
+		int clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+		history[(int)c][m.from().index()][m.to().index()] += clamped - history[(int)c][m.from().index()][m.to().index()] * std::abs(clamped) / MAX_HISTORY;
+	}
+	void updateConthist(Stack *ss, Board &board, Move m, int16_t bonus){
+		auto updateEntry = [&](int16_t &entry) {
+			int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+			entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+			entry = std::clamp((int)entry, int(-MAX_HISTORY), int(MAX_HISTORY));
+		};
+		if ((ss-1)->conthist != nullptr)
+			updateEntry(( *(ss-1)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
+		// if ((ss-2)->conthist != nullptr)
+		// 	updateEntry(( *(ss-2)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
+	}
+	int getHistory(Color c, Move m){
+		return history[(int)c][m.from().index()][m.to().index()];
+	}
+	MultiArray<int16_t, 64, 6, 2> *getConthistSegment(Board &board, Move m){
+		return &conthist[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
+	}
+	int16_t getConthist(MultiArray<int16_t, 64, 6, 2> *c, Board &board, Move m){
+		assert(c != nullptr);
+		return (*c)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
+	}
+	void reset(){
+		nodes.store(0, std::memory_order_relaxed);
+		bestMove = Move::NO_MOVE;
+		for (auto &i : history)
+			for (auto &j : i)
+				j.fill(0);
+		conthist.fill(DEFAULT_HISTORY);
+	}
+};
+
 
 struct Limit {
 	TimeLimit timer;

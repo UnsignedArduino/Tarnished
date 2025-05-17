@@ -1,6 +1,7 @@
 #pragma once
 
-
+constexpr int16_t MAX_HISTORY = 16383;
+const int16_t DEFAULT_HISTORY = 0;
 // NNUE Parameters
 
 constexpr int16_t HL_N = 128;
@@ -17,6 +18,7 @@ constexpr int NMP_BASE_REDUCTION = 3;
 constexpr int NMP_REDUCTION_SCALE = 4;
 constexpr int NMP_EVAL_SCALE = 200;
 
+constexpr int SEE_ORDERING_MARGIN = -100;
 // constexpr int SE_MIN_DEPTH = 8;
 // constexpr int SE_BETA_SCALE = 32;
 // constexpr int SE_DOUBLE_MARGIN = 32;
@@ -29,7 +31,7 @@ constexpr int HIST_CAPTURE_MULT_THRESHOLD = -1700;
 
 constexpr int LMR_MIN_DEPTH = 2;
 
-constexpr int BUTTERFLY_MULTIPLIER = 20;
+constexpr int HISTORY_QUADRATIC_BONUS = 20;
 
 constexpr int IIR_MIN_DEPTH = 6;
 

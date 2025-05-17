@@ -11,7 +11,7 @@
 struct Searcher {
 	TTable TT;
 	std::atomic<bool> abort;
-	Search::ThreadInfo mainInfo = Search::ThreadInfo(ThreadType::MAIN, TT, abort);
+	std::unique_ptr<Search::ThreadInfo> mainInfo = std::make_unique<Search::ThreadInfo>(ThreadType::MAIN, TT, abort);
 	std::thread mainThread;
 
 	std::vector<Search::ThreadInfo> workerInfo;
@@ -27,7 +27,7 @@ struct Searcher {
 		TT.clear();
 	}
 	void reset(){
-		mainInfo.reset();
+		mainInfo->reset();
 		for (Search::ThreadInfo &w : workerInfo)
 			w.reset();
 		TT.clear();
@@ -38,6 +38,6 @@ struct Searcher {
 		for (Search::ThreadInfo &t : workerInfo){
 			nodes += t.nodes;
 		}
-		return nodes + mainInfo.nodes;
+		return nodes + mainInfo->nodes;
 	}
 };

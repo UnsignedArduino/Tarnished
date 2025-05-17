@@ -47,7 +47,7 @@ namespace Search {
 			}
 		}
 	}
-	int16_t scoreMove(Move &move, Move &ttMove, Move &killer, ThreadInfo &thread){
+	int scoreMove(Move &move, Move &ttMove, Stack *ss, ThreadInfo &thread){
 		// MVV-LVA
 		// TT Move
 		// Killer Move Heuristic
@@ -55,22 +55,27 @@ namespace Search {
 
 		PieceType to = thread.board.at<PieceType>(move.to());
 		if (move == ttMove){
-			return 32511 + 60;
+			return 1000000;
 		}
 		else if (to != PieceType::NONE) {
 			// Max 16 bit int - 256 + MVVLVA
 			// https://rustic-chess.org/search/ordering/killers.html
-			return 32511 + MVVLVA[to][thread.board.at<PieceType>(move.from())];
+			return 500000 + MVVLVA[to][thread.board.at<PieceType>(move.from())];
 		}
-		else if (move == killer){
-			return 32511 - 10;
+		else if (move == ss->killer){
+			return 400000;
 		}
 		else {
-			// Quiet non killer
-			// Butterfly
-			return 32511 - 16384 + thread.getHistory(thread.board.sideToMove(), move);
+			// Quiet non killers
+			// main history + continuation history ~10 1ply
+			int his = thread.getHistory(thread.board.sideToMove(), move);
+			if (ss != nullptr && (ss-1)->conthist != nullptr)
+				his += thread.getConthist((ss-1)->conthist, thread.board, move);
+			// if (ss != nullptr && (ss-2)->conthist != nullptr)
+			// 	his += thread.getConthist((ss-2)->conthist, thread.board, move);
+			return his;
 		}
-		return 0;
+		return -1000000;
 	}
 	bool scoreComparator(Move &a, Move &b){
 		return a.score() > b.score();
@@ -117,7 +122,7 @@ namespace Search {
 		for (auto &move : moves){
 			// Qsearch doesnt have killers
 			// Still pass to make compiler happy
-			move.setScore(scoreMove(move, ttEntry->move, ss->killer, thread));
+			move.setScore(scoreMove(move, ttEntry->move, ss, thread));
 		}
 		for (int m_ = 0;m_<moves.size();m_++){
 			if (thread.abort.load(std::memory_order_relaxed))
@@ -195,6 +200,8 @@ namespace Search {
 		bool inCheck = thread.board.inCheck();
 		int eval = -INFINITE;
 
+		ss->conthist = nullptr;
+
 		// Improving heurstic
 		// We are better than 2 plies ago
 		bool improving = !inCheck && ply > 1 && (ss - 2)->staticEval < eval;
@@ -228,7 +235,7 @@ namespace Search {
 					if (depth <= 15 || thread.minNmpPly > 0)
 						return isWin(nmpScore) ? beta : nmpScore;
 					thread.minNmpPly = ply + (depth - reduction) * 3 / 4;
-					int verification = search<false>(depth-NMP_BASE_REDUCTION, ply+1, beta-1, beta, ss+1, thread, limit);
+					int verification = search<false>(depth-NMP_BASE_REDUCTION, ply+1, beta-1, beta, ss, thread, limit);
 					thread.minNmpPly = 0;
 					if (verification >= beta)
 						return verification;
@@ -246,6 +253,7 @@ namespace Search {
 		if (canIIR)
 			depth -= 1;
 
+		
 
 	move_loop:
 		Move bestMove = Move::NO_MOVE;
@@ -256,7 +264,7 @@ namespace Search {
 
 		// Move Scoring
 		for (auto &move : moves){
-			move.setScore(scoreMove(move, ttEntry->move, ss->killer, thread));
+			move.setScore(scoreMove(move, ttEntry->move, ss, thread));
 		}
 		bestMove = moves[0];
 		// Other vars
@@ -295,6 +303,8 @@ namespace Search {
 			}
 
 			//thread.board.makeMove<true>(move);
+			ss->conthist = thread.getConthistSegment(thread.board, move);
+
 			MakeMove(thread.board, thread.accumulator, move);
 
 			// Check Extensions
@@ -340,14 +350,20 @@ namespace Search {
 				ttFlag = TTFlag::BETA_CUT;
 				ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
 				// Butterfly History
+				// Continuation History
 				if (isQuiet){
-					thread.updateHistory(thread.board.sideToMove(), move, BUTTERFLY_MULTIPLIER * depth * depth);
+					int bonus = HISTORY_QUADRATIC_BONUS * depth * depth;
+					int malus = -bonus; // For now
+					thread.updateHistory(thread.board.sideToMove(), move, bonus);
+					thread.updateConthist(ss, thread.board, move, bonus);
+					for (const Move quietMove : seenQuiets){
+						if (quietMove == move)
+							continue;
+						thread.updateHistory(thread.board.sideToMove(), quietMove, malus);
+						thread.updateConthist(ss, thread.board, quietMove, malus);
+					}
 				}
-				for (const Move quietMove : seenQuiets){
-					if (quietMove == move)
-						continue;
-					thread.updateHistory(thread.board.sideToMove(), quietMove, -BUTTERFLY_MULTIPLIER * depth * depth);
-				}
+				
 				break;
 			}
 			
@@ -369,9 +385,9 @@ namespace Search {
 		// TODO set nodes and stuff too
 		bool isMain = threadInfo.type == ThreadType::MAIN;
 
-		auto stack = std::make_unique<std::array<Stack, MAX_PLY+2>>();
-		Stack *ss = reinterpret_cast<Stack*>(stack->data()+1);
-		std::memset(stack.get(), 0, sizeof(Stack) * (MAX_PLY+2));
+		auto stack = std::make_unique<std::array<Stack, MAX_PLY+3>>();
+		Stack *ss = reinterpret_cast<Stack*>(stack->data()+2); // Saftey for conthist
+		std::memset(stack.get(), 0, sizeof(Stack) * (MAX_PLY+3));
 
 		PVList lastPV{};
 		int score = -INFINITE;
@@ -539,21 +555,21 @@ namespace Search {
 	        Board board(fen);
 	        std::atomic<bool> benchAbort(false);
 	        TTable TT;
-	        Search::ThreadInfo thread(ThreadType::SECONDARY, TT, benchAbort);
+	        std::unique_ptr<Search::ThreadInfo> thread = std::make_unique<Search::ThreadInfo>(ThreadType::SECONDARY, TT, benchAbort);
 
 	        Search::Limit limit = Search::Limit();
 	        limit.depth = (int64_t)BENCH_DEPTH; limit.movetime = 0; limit.ctime = 0;
 	        limit.start();
 
-	        Search::iterativeDeepening(board, thread, limit, nullptr);
+	        Search::iterativeDeepening(board, *thread, limit, nullptr);
 
 	        int ms = timer.elapsed();
 	        totalMS += ms;
-	        totalNodes += thread.nodes;
+	        totalNodes += thread->nodes;
 	        
 	        std::cout << "-----------------------------------------------------------------------" << std::endl;
 	        std::cout << "FEN: " << fen << std::endl;
-	        std::cout << "Nodes: " << thread.nodes << std::endl;
+	        std::cout << "Nodes: " << thread->nodes << std::endl;
 	        std::cout << "Time: " << ms << "ms" << std::endl;
 	        std::cout << "-----------------------------------------------------------------------\n" << std::endl;
 	    }
@@ -567,8 +583,8 @@ namespace Search {
 }
 
 void Searcher::start(Board &board, Search::Limit limit){
-	mainInfo.nodes = 0;
-	mainThread = std::thread(Search::iterativeDeepening, std::ref(board), std::ref(mainInfo), limit, this);
+	mainInfo->nodes = 0;
+	mainThread = std::thread(Search::iterativeDeepening, std::ref(board), std::ref(*mainInfo), limit, this);
 	for (int i=0;i<workerInfo.size();i++){	
 		workerInfo[i].nodes = 0;
 		workers.emplace_back(Search::iterativeDeepening, std::ref(board), std::ref(workerInfo[i]), limit, nullptr);

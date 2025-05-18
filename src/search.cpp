@@ -68,12 +68,7 @@ namespace Search {
 		else {
 			// Quiet non killers
 			// main history + continuation history ~10 1ply
-			int his = thread.getHistory(thread.board.sideToMove(), move);
-			if (ss != nullptr && (ss-1)->conthist != nullptr)
-				his += thread.getConthist((ss-1)->conthist, thread.board, move);
-			// if (ss != nullptr && (ss-2)->conthist != nullptr)
-			// 	his += thread.getConthist((ss-2)->conthist, thread.board, move);
-			return his;
+			return thread.getQuietHistory(thread.board, move, ss);
 		}
 		return -1000000;
 	}
@@ -288,10 +283,10 @@ namespace Search {
 			else
 				seenCaptures.add(move);
 
-			
+
 			if (!root && bestScore > GETTING_MATED){
 				// Late Move Pruning
-				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (improving+1))
+				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (!improving+1))
 					break;
 
 				// History Pruning

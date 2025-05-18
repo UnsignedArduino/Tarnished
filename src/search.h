@@ -134,6 +134,12 @@ struct ThreadInfo {
 		assert(c != nullptr);
 		return (*c)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
 	}
+	int getQuietHistory(Board &board, Move m, Stack *ss){
+		int hist = getHistory(board.sideToMove(), m);
+		if (ss != nullptr && (ss-1)->conthist != nullptr)
+			hist += getConthist((ss-1)->conthist, board, m);
+		return hist;
+	}
 	void reset(){
 		nodes.store(0, std::memory_order_relaxed);
 		bestMove = Move::NO_MOVE;

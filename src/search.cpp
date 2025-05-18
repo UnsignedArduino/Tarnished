@@ -286,7 +286,7 @@ namespace Search {
 
 			if (!root && bestScore > GETTING_MATED){
 				// Late Move Pruning
-				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (!improving+1))
+				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (improving + 1))
 					break;
 
 				// History Pruning
@@ -362,14 +362,16 @@ namespace Search {
 						thread.updateConthist(ss, thread.board, quietMove, malus);
 					}
 				}
-				else {
-					thread.updateCapthist(thread.board, move, bonus);
-					for (const Move noisyMove : seenCaptures){
-						if (noisyMove == move)
-							continue;
-						thread.updateCapthist(thread.board, noisyMove, malus);
-					}
+				// Remove this else statement
+				// Thanks rand
+				
+				thread.updateCapthist(thread.board, move, bonus);
+				for (const Move noisyMove : seenCaptures){
+					if (noisyMove == move)
+						continue;
+					thread.updateCapthist(thread.board, noisyMove, malus);
 				}
+				
 				
 				break;
 			}

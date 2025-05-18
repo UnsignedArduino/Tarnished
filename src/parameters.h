@@ -23,11 +23,12 @@ constexpr int SEE_ORDERING_MARGIN = -100;
 // constexpr int SE_BETA_SCALE = 32;
 // constexpr int SE_DOUBLE_MARGIN = 32;
 
-constexpr int HIST_PRUNING_DEPTH = 5;
-constexpr int HIST_BASE_THRESHOLD = -380;
-constexpr int HIST_MULT_THRESHOLD = -2000;
-constexpr int HIST_CAPTURE_BASE_THRESHOLD = -500;
-constexpr int HIST_CAPTURE_MULT_THRESHOLD = -1700;
+constexpr int HIST_PRUNING_DEPTH = 7;
+constexpr int HIST_PRUNING_MARGIN = -1700;
+// constexpr int HIST_BASE_THRESHOLD = -380;
+// constexpr int HIST_MULT_THRESHOLD = -2000;
+// constexpr int HIST_CAPTURE_BASE_THRESHOLD = -500;
+// constexpr int HIST_CAPTURE_MULT_THRESHOLD = -1700;
 
 constexpr int LMR_MIN_DEPTH = 2;
 

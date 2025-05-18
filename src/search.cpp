@@ -283,6 +283,7 @@ namespace Search {
 			else
 				seenCaptures.add(move);
 
+			ss->historyScore = isQuiet ? thread.getQuietHistory(thread.board, move, ss) : thread.getCapthist(thread.board, move);
 
 			if (!root && bestScore > GETTING_MATED){
 				// Late Move Pruning
@@ -291,16 +292,14 @@ namespace Search {
 
 				// History Pruning
 				// https://github.com/aronpetko/integral/blob/733036df88408d0d6338d05f7991f46f0527ed4f/src/engine/search/search.cc#L945
-				// const int historyMargin = isQuiet ? HIST_BASE_THRESHOLD + HIST_MULT_THRESHOLD * depth;
-				// 								: HIST_CAPTURE_BASE_THRESHOLD + HIST_CAPTURE_MULT_THRESHOLD * depth;
-
-				// if (depth <= HIST_PRUNING_DEPTH && ss->historyScore <= historyMargin){
-				// 	skipQuiets = true;
-				// 	continue;
-				// }
+				// https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L614
+				if (isQuiet && depth <= HIST_PRUNING_DEPTH && ss->historyScore <= HIST_PRUNING_MARGIN * depth){
+					break;
+				}
 			}
 
 			//thread.board.makeMove<true>(move);
+
 			ss->conthist = thread.getConthistSegment(thread.board, move);
 
 			MakeMove(thread.board, thread.accumulator, move);
@@ -364,7 +363,7 @@ namespace Search {
 				}
 				else
 					thread.updateCapthist(thread.board, move, bonus);
-				
+
 				// Remove this else statement
 				// Thanks rand
 				for (const Move noisyMove : seenCaptures){

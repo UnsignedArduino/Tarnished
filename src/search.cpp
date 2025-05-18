@@ -362,10 +362,11 @@ namespace Search {
 						thread.updateConthist(ss, thread.board, quietMove, malus);
 					}
 				}
+				else
+					thread.updateCapthist(thread.board, move, bonus);
+				
 				// Remove this else statement
 				// Thanks rand
-				
-				thread.updateCapthist(thread.board, move, bonus);
 				for (const Move noisyMove : seenCaptures){
 					if (noisyMove == move)
 						continue;

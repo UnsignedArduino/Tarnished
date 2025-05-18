@@ -36,7 +36,7 @@ Alternatively, with `CMake`
 
 - Move Generation
     - Internally uses [chess-library](https://disservin.github.io/chess-library/)
-- NNUE `(768->128)x2->1x8`
+- NNUE `(768->512)x2->1x8`
     - Trained with [bullet](https://github.com/jw1912/bullet)
     - Self generated training data
     - `(piece, square, color)` input features, 8 output buckets

@@ -61,7 +61,6 @@ namespace Search {
 			int hist = thread.getCapthist(thread.board, move);
 			int score = hist + MVV_VALUES[to];
 			return 500000 + score;
-			//return 500000 + MVVLVA[to][thread.board.at<PieceType>(move.from())];
 		}
 		else if (move == ss->killer){
 			return 400000;

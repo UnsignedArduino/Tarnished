@@ -58,9 +58,10 @@ namespace Search {
 			return 1000000;
 		}
 		else if (to != PieceType::NONE) {
-			// Max 16 bit int - 256 + MVVLVA
-			// https://rustic-chess.org/search/ordering/killers.html
-			return 500000 + MVVLVA[to][thread.board.at<PieceType>(move.from())];
+			int hist = thread.getCapthist(thread.board, move);
+			int score = hist + MVV_VALUES[to];
+			return 500000 + score;
+			//return 500000 + MVVLVA[to][thread.board.at<PieceType>(move.from())];
 		}
 		else if (move == ss->killer){
 			return 400000;
@@ -259,6 +260,7 @@ namespace Search {
 		Move bestMove = Move::NO_MOVE;
 		Movelist moves;
 		Movelist seenQuiets;
+		Movelist seenCaptures;
 
 		movegen::legalmoves(moves, thread.board);
 
@@ -284,6 +286,8 @@ namespace Search {
 				continue;
 			if (isQuiet)
 				seenQuiets.add(move);
+			else
+				seenCaptures.add(move);
 
 			
 			if (!root && bestScore > GETTING_MATED){
@@ -351,9 +355,10 @@ namespace Search {
 				ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
 				// Butterfly History
 				// Continuation History
+				// Capture History
+				int bonus = HISTORY_QUADRATIC_BONUS * depth * depth;
+				int malus = -bonus; // For now
 				if (isQuiet){
-					int bonus = HISTORY_QUADRATIC_BONUS * depth * depth;
-					int malus = -bonus; // For now
 					thread.updateHistory(thread.board.sideToMove(), move, bonus);
 					thread.updateConthist(ss, thread.board, move, bonus);
 					for (const Move quietMove : seenQuiets){
@@ -361,6 +366,14 @@ namespace Search {
 							continue;
 						thread.updateHistory(thread.board.sideToMove(), quietMove, malus);
 						thread.updateConthist(ss, thread.board, quietMove, malus);
+					}
+				}
+				else {
+					thread.updateCapthist(thread.board, move, bonus);
+					for (const Move noisyMove : seenCaptures){
+						if (noisyMove == move)
+							continue;
+						thread.updateCapthist(thread.board, noisyMove, malus);
 					}
 				}
 				

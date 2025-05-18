@@ -53,13 +53,15 @@ Alternatively, with `CMake`
         - TT Move
         - Killer Move Heuristic 
         - Butterfly History Heuristic
-        - SEE Move Ordering
+        - 1 ply Continuation History
+        - Capture History
     - Selectivity
         - Reverse Futility Pruning
         - Null Move Pruning
         - Improving Heuristic
         - Late Move Reductions
         - Late Move Pruning
+        - QS SEE Pruning
         - Terminal Conditions (Mate, Stalemate, 3fold...)
         - Internal Iterative Reductions
  - Misc

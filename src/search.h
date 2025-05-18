@@ -24,7 +24,8 @@ const int MVVLVA[7][7] = {
     {55, 54, 53, 52, 51, 50, 0}, // Victim Q, attacker P, N, B, R, Q, K, None
     {0,  0,  0,  0,  0,  0,  0}  // Victim None, attacker P, N, B, R, Q, K, None
 };
-
+// Sirius values
+constexpr int MVV_VALUES[6] = {800, 2400, 2400, 4800, 7200};
 
 enum ThreadType {
     MAIN      = 1,
@@ -78,6 +79,8 @@ struct ThreadInfo {
 	std::array<std::array<std::array<int, 64>, 64>, 2> history;
 	// indexed by [prev stm][prev pt][prev to][stm][pt][to]
 	MultiArray<int16_t, 64, 6, 2, 64, 6, 2> conthist;
+	// indexed by [stm][moving pt][cap pt][to]
+	MultiArray<int, 64, 6, 6, 2> capthist;
 	//uint64_t ttHits;
 
 	ThreadInfo(ThreadType type, TTable &TT, std::atomic<bool> &abort) : type(type), TT(TT), abort(abort) {
@@ -85,6 +88,7 @@ struct ThreadInfo {
 		this->board = Board();
 		std::memset(&history, 0, sizeof(history));
 		conthist.fill(DEFAULT_HISTORY);
+		capthist.fill((int)DEFAULT_HISTORY);
 		nodes = 0;
 		bestMove = Move::NO_MOVE;
 		minNmpPly = 0;
@@ -101,6 +105,11 @@ struct ThreadInfo {
 		int clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
 		history[(int)c][m.from().index()][m.to().index()] += clamped - history[(int)c][m.from().index()][m.to().index()] * std::abs(clamped) / MAX_HISTORY;
 	}
+	void updateCapthist(Board &board, Move m, int bonus){
+		int clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+		int &entry = capthist[board.sideToMove()][board.at<PieceType>(m.from())][board.at<PieceType>(m.to())][m.to().index()];
+		entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+	}
 	void updateConthist(Stack *ss, Board &board, Move m, int16_t bonus){
 		auto updateEntry = [&](int16_t &entry) {
 			int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
@@ -114,6 +123,9 @@ struct ThreadInfo {
 	}
 	int getHistory(Color c, Move m){
 		return history[(int)c][m.from().index()][m.to().index()];
+	}
+	int getCapthist(Board &board, Move m){
+		return capthist[board.sideToMove()][board.at<PieceType>(m.from())][board.at<PieceType>(m.to())][m.to().index()];
 	}
 	MultiArray<int16_t, 64, 6, 2> *getConthistSegment(Board &board, Move m){
 		return &conthist[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
@@ -129,6 +141,7 @@ struct ThreadInfo {
 			for (auto &j : i)
 				j.fill(0);
 		conthist.fill(DEFAULT_HISTORY);
+		capthist.fill((int)DEFAULT_HISTORY);
 	}
 };
 

@@ -5,7 +5,10 @@ SET(CMAKE_CXX_STANDARD 20)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 # SET(CMAKE_CXX_FLAGS "-static -static-libgcc -static-libstdc++")
 
-set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
+SET(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
+
+# Because typically the build directory is at the same level as the network directory
+ADD_COMPILE_DEFINITIONS(EVALFILE="../network/latest.bin")
 
 # Main executable
 FILE(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "${SRC_DIR}/*.cpp" "${SRC_DIR}/*.h" "${SRC_DIR}/*.hpp")

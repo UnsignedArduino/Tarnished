@@ -327,8 +327,8 @@ namespace Search {
 				if (seScore < sBeta) {
 					extension = 1; // Singular Extension
 				}
-				// else if (ttEntry->score >= beta)
-				// 	extension = -2 + isPV;
+				else if (ttEntry->score >= beta)
+					extension = -2 + isPV;
 
 			}					
 

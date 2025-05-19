@@ -309,7 +309,7 @@ namespace Search {
 			// https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
 			bool doSE = !root && moveIsNull(ss->excluded) &&
 						depth >= SE_MIN_DEPTH && ttEntry->move == move && ttEntry->depth >= depth - 3
-						&& ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score > GETTING_MATED;	
+						&& ttEntry->flag != TTFlag::FAIL_LOW && ttEntry->score > GETTING_MATED;	
 			
 			int extension = 0;
 

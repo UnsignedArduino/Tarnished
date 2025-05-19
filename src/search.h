@@ -59,7 +59,8 @@ struct Stack {
     PVList pv;
     chess::Move killer;
     int    staticEval;
-    int historyScore;
+    int    historyScore;
+    Move excluded{};
     MultiArray<int16_t, 64, 6, 2> *conthist;
 };
 
@@ -118,8 +119,6 @@ struct ThreadInfo {
 		};
 		if ((ss-1)->conthist != nullptr)
 			updateEntry(( *(ss-1)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
-		// if ((ss-2)->conthist != nullptr)
-		// 	updateEntry(( *(ss-2)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
 	}
 	int getHistory(Color c, Move m){
 		return history[(int)c][m.from().index()][m.to().index()];
@@ -133,6 +132,12 @@ struct ThreadInfo {
 	int16_t getConthist(MultiArray<int16_t, 64, 6, 2> *c, Board &board, Move m){
 		assert(c != nullptr);
 		return (*c)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
+	}
+	int getQuietHistory(Board &board, Move m, Stack *ss){
+		int hist = getHistory(board.sideToMove(), m);
+		if (ss != nullptr && (ss-1)->conthist != nullptr)
+			hist += getConthist((ss-1)->conthist, board, m);
+		return hist;
 	}
 	void reset(){
 		nodes.store(0, std::memory_order_relaxed);

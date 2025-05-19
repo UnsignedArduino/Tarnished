@@ -175,14 +175,14 @@ namespace Search {
 
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
-		bool ttHit = ttEntry->zobrist == thread.board.hash();
+		bool ttHit = moveIsNull(ss->excluded) && ttEntry->zobrist == thread.board.hash();
 		if (!isPV && ttHit && ttEntry->depth >= depth
 			&& (ttEntry->flag == TTFlag::EXACT 
 				|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= beta)
 				|| (ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= alpha))){
 			return ttEntry->score;
 		}
-		bool hashMove = !ttHit || ttEntry->move == Move::NO_MOVE;
+		bool hashMove = !ttHit || moveIsNull(ttEntry->move);
 
 		// http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
     	// https://github.com/jhonnold/berserk/blob/dd1678c278412898561d40a31a7bd08d49565636/src/search.c#L379
@@ -209,7 +209,7 @@ namespace Search {
 		ss->staticEval = eval;
 
 		
-		if (!root && !isPV){
+		if (!root && !isPV && moveIsNull(ss->excluded)){
 			// Reverse Futility Pruning
 			if (eval - RFP_MARGIN * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH)
 				return eval;
@@ -276,6 +276,8 @@ namespace Search {
 			Move move = moves[m_];
 			bool isQuiet = thread.board.at<PieceType>(move.to()) == PieceType::NONE;
 
+			if (move == ss->excluded)
+				continue;
 			if (isQuiet && skipQuiets)
 				continue;
 			if (isQuiet)
@@ -299,21 +301,39 @@ namespace Search {
 				// }
 			}
 
-			//thread.board.makeMove<true>(move);
 
 			ss->conthist = thread.getConthistSegment(thread.board, move);
 
+			// Singular Extensions
+			// Sirius conditions
+			// https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
+			bool doSE = !root && ply < 2 * thread.rootDepth && moveIsNull(ss->excluded) &&
+						depth >= SE_MIN_DEPTH && ttEntry->move == move && ttEntry->depth >= depth - 3
+						&& ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score > GETTING_MATED;	
+			
+			int extension = 0;
+
+			if (doSE) {
+				int sBeta = std::max(-INFINITE + 1, ttEntry->score - SE_BETA_SCALE * depth / 16);
+				int sDepth = (depth - 1) / 2;
+				// How good are we without this move
+				ss->excluded = ttEntry->move;
+				int seScore = search<false>(sDepth, ply+1, sBeta-1, sBeta, ss, thread, limit);
+				ss->excluded = Move::NO_MOVE;
+
+				if (seScore < sBeta) {
+					extension = 1; // Singular Extension
+				}
+
+			}					
+
 			MakeMove(thread.board, thread.accumulator, move);
 
-			// Check Extensions
-			// bool givesCheck = thread.board.inCheck();
-			// if (!doSE && givesCheck)
-			// 	extension = 1;
-
-			int newDepth = depth - 1;
 			moveCount++;
 			thread.nodes++;
+			
 
+			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
 			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && !thread.board.inCheck()){
 				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount] + !isPV;
@@ -329,7 +349,6 @@ namespace Search {
 			if (isPV && (moveCount == 1 || score > alpha)){
 				score = -search<isPV>(newDepth, ply+1, -beta, -alpha, ss+1, thread, limit);
 			}
-			//thread.board.unmakeMove(move);
 			UnmakeMove(thread.board, thread.accumulator, move);
 			if (score > bestScore){
 				bestScore = score;
@@ -381,7 +400,8 @@ namespace Search {
 		if (!moveCount)
 			return inCheck ? -MATE + ply : 0;
 
-		*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
+		if (moveIsNull(ss->excluded))
+			*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
 		return bestScore;
 
 	}

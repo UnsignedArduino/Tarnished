@@ -61,6 +61,11 @@ Bitboard attackersTo(Board &board, Square s, Bitboard occ);
 void pinnersBlockers(Board &board, Color c, StateInfo sti);
 bool SEE(Board &board, Move &move, int margin);
 
+// Util Move
+static bool moveIsNull(Move m){
+	return m == Move::NO_MOVE;
+}
+
 
 // Thanks shawn and stockfish
 template<typename T, std::size_t Size, std::size_t... Sizes>

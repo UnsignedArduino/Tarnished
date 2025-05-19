@@ -307,7 +307,7 @@ namespace Search {
 			// Singular Extensions
 			// Sirius conditions
 			// https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
-			bool doSE = !root && ply < 2 * thread.rootDepth && moveIsNull(ss->excluded) &&
+			bool doSE = !root && moveIsNull(ss->excluded) &&
 						depth >= SE_MIN_DEPTH && ttEntry->move == move && ttEntry->depth >= depth - 3
 						&& ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score > GETTING_MATED;	
 			
@@ -324,8 +324,8 @@ namespace Search {
 				if (seScore < sBeta) {
 					extension = 1; // Singular Extension
 				}
-				else if (ttEntry->score >= beta)
-					extension = -2 + isPV;
+				// else if (ttEntry->score >= beta)
+				// 	extension = -2 + isPV;
 
 			}					
 

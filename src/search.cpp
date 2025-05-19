@@ -324,6 +324,8 @@ namespace Search {
 				if (seScore < sBeta) {
 					extension = 1; // Singular Extension
 				}
+				else if (ttEntry->score >= beta)
+					extension = -2 + isPV;
 
 			}					
 
@@ -381,15 +383,15 @@ namespace Search {
 						thread.updateConthist(ss, thread.board, quietMove, malus);
 					}
 				}
-				else
+				else {
 					thread.updateCapthist(thread.board, move, bonus);
-
-				// Remove this else statement
-				// Thanks rand
-				for (const Move noisyMove : seenCaptures){
-					if (noisyMove == move)
-						continue;
-					thread.updateCapthist(thread.board, noisyMove, malus);
+					// Move this out of else
+					// Test later
+					for (const Move noisyMove : seenCaptures){
+						if (noisyMove == move)
+							continue;
+						thread.updateCapthist(thread.board, noisyMove, malus);
+					}
 				}
 				
 				

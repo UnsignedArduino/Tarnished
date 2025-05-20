@@ -210,11 +210,11 @@ namespace Search {
 
 		// Improving heurstic
 		// We are better than 2 plies ago
-		bool improving = !inCheck && ply > 1 && (ss - 2)->staticEval < eval;
+		bool improving = !inCheck && ply > 1 && (ss - 2)->staticEval < ss->staticEval;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
 		// Pruning
 		
-		if (!root && !isPV && moveIsNull(ss->excluded)){
+		if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)){
 			// Reverse Futility Pruning
 			if (eval - RFP_MARGIN * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH)
 				return eval;
@@ -241,6 +241,9 @@ namespace Search {
 						return verification;
 				}
 			}
+			// Internal Iterative Reduction
+			if (canIIR)
+				depth -= 1;
 		}
 
 		
@@ -249,9 +252,7 @@ namespace Search {
 		// and use some sort of data generation method to create a pruning heuristic
 		// with something like sigmoid(C dot I) >= 0.75 ?
 
-		// Internal Iterative Reduction
-		if (canIIR && !root && !isPV)
-			depth -= 1;
+		
 
 
 		Move bestMove = Move::NO_MOVE;

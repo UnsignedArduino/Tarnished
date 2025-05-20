@@ -198,19 +198,21 @@ namespace Search {
 		bool inCheck = thread.board.inCheck();
 		int eval = -INFINITE;
 
+		if (!inCheck){
+			eval = network.inference(&thread.board, &thread.accumulator);
+			ss->staticEval = eval;
+		}
+		else {
+			ss->staticEval = eval;
+		}
+
 		ss->conthist = nullptr;
 
 		// Improving heurstic
 		// We are better than 2 plies ago
 		bool improving = !inCheck && ply > 1 && (ss - 2)->staticEval < eval;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
-		if (isPV || inCheck)
-			goto move_loop;
-
 		// Pruning
-		eval = network.inference(&thread.board, &thread.accumulator);
-		ss->staticEval = eval;
-
 		
 		if (!root && !isPV && moveIsNull(ss->excluded)){
 			// Reverse Futility Pruning
@@ -248,12 +250,10 @@ namespace Search {
 		// with something like sigmoid(C dot I) >= 0.75 ?
 
 		// Internal Iterative Reduction
-		if (canIIR)
+		if (canIIR && !root && !isPV)
 			depth -= 1;
 
-		
 
-	move_loop:
 		Move bestMove = Move::NO_MOVE;
 		Movelist moves;
 		Movelist seenQuiets;
@@ -265,7 +265,8 @@ namespace Search {
 		for (auto &move : moves){
 			move.setScore(scoreMove(move, ttEntry->move, ss, thread));
 		}
-		bestMove = moves[0];
+		if (root)
+			bestMove = moves[0]; // Guaruntee some random move
 		// Other vars
 		bool skipQuiets = false;
 		for (int m_ = 0;m_<moves.size();m_++){
@@ -408,8 +409,15 @@ namespace Search {
 		if (!moveCount)
 			return inCheck ? -MATE + ply : 0;
 
-		if (moveIsNull(ss->excluded))
+		if (moveIsNull(ss->excluded)){
+			// Update correction history
+			bool isBestQuiet = thread.board.at<PieceType>(bestMove.to()) == PieceType::NONE || bestMove.typeOf() == Move::ENPASSANT;
+			// if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
+			// 	&& !(ttFlag == TTFlag::BETA_CUT && ss->staticEval >= bestScore) 
+			// 	&& !(ttFlag == TTFlag::FAIL_LOW && ss->staticEval <= bestScore))
+			// 	thread.updateCorrhist(thread.board, bestScore - eval);
 			*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
+		}
 		return bestScore;
 
 	}

@@ -6,6 +6,7 @@
 #include "nnue.h"
 #include "parameters.h"
 #include "util.h"
+#include "eval.h"
 #include <atomic>
 #include <cstring>
 #include <thread>
@@ -13,8 +14,8 @@
 
 using namespace chess;
 
-#define MAX_PLY 125
-#define BENCH_DEPTH 12
+
+
 
 const int MVVLVA[7][7] = {
     {15, 14, 13, 12, 11, 10, 0}, // Victim P, attacker P, N, B, R, Q, K, None
@@ -82,7 +83,8 @@ struct ThreadInfo {
 	MultiArray<int16_t, 64, 6, 2, 64, 6, 2> conthist;
 	// indexed by [stm][moving pt][cap pt][to]
 	MultiArray<int, 64, 6, 6, 2> capthist;
-	//uint64_t ttHits;
+	
+	MultiArray<int, PAWN_CORR_HIST_ENTRIES, 2> pawnCorrhist;
 
 	ThreadInfo(ThreadType type, TTable &TT, std::atomic<bool> &abort) : type(type), TT(TT), abort(abort) {
 		abort.store(false, std::memory_order_relaxed);
@@ -90,6 +92,7 @@ struct ThreadInfo {
 		std::memset(&history, 0, sizeof(history));
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
+		pawnCorrhist.fill((int)DEFAULT_HISTORY);
 		nodes = 0;
 		bestMove = Move::NO_MOVE;
 		minNmpPly = 0;
@@ -102,6 +105,7 @@ struct ThreadInfo {
 		conthist = other.conthist;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}
+	// History updaters
 	void updateHistory(Color c, Move m, int bonus){
 		int clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
 		history[(int)c][m.from().index()][m.to().index()] += clamped - history[(int)c][m.from().index()][m.to().index()] * std::abs(clamped) / MAX_HISTORY;
@@ -120,6 +124,12 @@ struct ThreadInfo {
 		if ((ss-1)->conthist != nullptr)
 			updateEntry(( *(ss-1)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
 	}
+	void updateCorrhist(Board &board, int bonus){
+		int &entry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN).getBits()) % PAWN_CORR_HIST_ENTRIES];
+		int clamped = std::clamp(bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+		entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+	}
+	// History getters
 	int getHistory(Color c, Move m){
 		return history[(int)c][m.from().index()][m.to().index()];
 	}
@@ -139,6 +149,15 @@ struct ThreadInfo {
 			hist += getConthist((ss-1)->conthist, board, m);
 		return hist;
 	}
+	int correctStaticEval(Board &board, int eval){
+		int pawnEntry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN).getBits()) % PAWN_CORR_HIST_ENTRIES];
+
+		int correction = 0;
+		correction += PAWN_CORR_WEIGHT * pawnEntry;
+
+		int corrected = eval + correction / CORR_HIST_SCALE;
+		return std::clamp(corrected, GETTING_MATED + 1, FOUND_MATE - 1);
+	}
 	void reset(){
 		nodes.store(0, std::memory_order_relaxed);
 		bestMove = Move::NO_MOVE;
@@ -147,6 +166,7 @@ struct ThreadInfo {
 				j.fill(0);
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
+		pawnCorrhist.fill((int)DEFAULT_HISTORY);
 	}
 };
 

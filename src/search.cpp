@@ -196,14 +196,12 @@ namespace Search {
 		int score = bestScore;
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
-		int eval = -INFINITE;
 
 		if (!inCheck){
-			eval = network.inference(&thread.board, &thread.accumulator);
-			ss->staticEval = eval;
+			ss->staticEval = network.inference(&thread.board, &thread.accumulator);;
 		}
 		else {
-			ss->staticEval = eval;
+			ss->staticEval = -INFINITE;
 		}
 
 		ss->conthist = nullptr;
@@ -216,14 +214,14 @@ namespace Search {
 		
 		if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)){
 			// Reverse Futility Pruning
-			if (eval - RFP_MARGIN * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH)
-				return eval;
+			if (ss->staticEval - RFP_MARGIN * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH)
+				return ss->staticEval;
 
 			// Null Move Pruning
 			Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^ thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
-			if (depth >= 2 && eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()){
+			if (depth >= 2 && ss->staticEval >= beta && ply > thread.minNmpPly && !nonPawns.empty()){
 				// Sirius formula
-				const int reduction = NMP_BASE_REDUCTION + depth / NMP_REDUCTION_SCALE + std::min(2, (eval-beta)/NMP_EVAL_SCALE);
+				const int reduction = NMP_BASE_REDUCTION + depth / NMP_REDUCTION_SCALE + std::min(2, (ss->staticEval-beta)/NMP_EVAL_SCALE);
 				thread.board.makeNullMove();
 				int nmpScore = -search<false>(depth-reduction, ply+1, -beta, -beta + 1, ss+1, thread, limit);
 				thread.board.unmakeNullMove();
@@ -294,7 +292,7 @@ namespace Search {
 
 			if (!root && bestScore > GETTING_MATED){
 				// Late Move Pruning
-				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (improving + 1))
+				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (2 - improving))
 					break;
 
 				// History Pruning

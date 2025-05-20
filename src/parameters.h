@@ -16,7 +16,7 @@ constexpr int16_t NNUE_SCALE = 400;
 constexpr int OUTPUT_BUCKETS = 8; 
 
 // Search Parameters
-constexpr int RFP_MARGIN = 80;
+constexpr int RFP_MARGIN = 70;
 constexpr int RFP_MAX_DEPTH = 6;
 
 constexpr int NMP_BASE_REDUCTION = 3;

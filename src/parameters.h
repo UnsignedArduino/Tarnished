@@ -22,7 +22,7 @@ constexpr int SEE_ORDERING_MARGIN = -100;
 
 constexpr int SE_MIN_DEPTH = 8;
 constexpr int SE_BETA_SCALE = 32;
-constexpr int SE_DOUBLE_MARGIN = 32;
+constexpr int SE_DOUBLE_MARGIN = 20;
 
 // constexpr int HIST_PRUNING_DEPTH = 7;
 // constexpr int HIST_PRUNING_MARGIN = -2048;

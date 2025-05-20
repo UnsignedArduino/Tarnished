@@ -196,32 +196,32 @@ namespace Search {
 		int score = bestScore;
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
-		int eval = -INFINITE;
+
+		if (!inCheck){
+			ss->staticEval = network.inference(&thread.board, &thread.accumulator);;
+		}
+		else {
+			ss->staticEval = -INFINITE;
+		}
 
 		ss->conthist = nullptr;
 
 		// Improving heurstic
 		// We are better than 2 plies ago
-		bool improving = !inCheck && ply > 1 && (ss - 2)->staticEval < eval;
+		bool improving = !inCheck && ply > 1 && (ss - 2)->staticEval < ss->staticEval;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
-		if (isPV || inCheck)
-			goto move_loop;
-
 		// Pruning
-		eval = network.inference(&thread.board, &thread.accumulator);
-		ss->staticEval = eval;
-
 		
-		if (!root && !isPV && moveIsNull(ss->excluded)){
+		if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)){
 			// Reverse Futility Pruning
-			if (eval - RFP_MARGIN * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH)
-				return eval;
+			if (ss->staticEval - RFP_MARGIN * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH)
+				return ss->staticEval;
 
 			// Null Move Pruning
 			Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^ thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
-			if (depth >= 2 && eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()){
+			if (depth >= 2 && ss->staticEval >= beta && ply > thread.minNmpPly && !nonPawns.empty()){
 				// Sirius formula
-				const int reduction = NMP_BASE_REDUCTION + depth / NMP_REDUCTION_SCALE + std::min(2, (eval-beta)/NMP_EVAL_SCALE);
+				const int reduction = NMP_BASE_REDUCTION + depth / NMP_REDUCTION_SCALE + std::min(2, (ss->staticEval-beta)/NMP_EVAL_SCALE);
 				thread.board.makeNullMove();
 				int nmpScore = -search<false>(depth-reduction, ply+1, -beta, -beta + 1, ss+1, thread, limit);
 				thread.board.unmakeNullMove();
@@ -239,6 +239,9 @@ namespace Search {
 						return verification;
 				}
 			}
+			// Internal Iterative Reduction
+			if (canIIR)
+				depth -= 1;
 		}
 
 		
@@ -247,13 +250,9 @@ namespace Search {
 		// and use some sort of data generation method to create a pruning heuristic
 		// with something like sigmoid(C dot I) >= 0.75 ?
 
-		// Internal Iterative Reduction
-		if (canIIR)
-			depth -= 1;
-
 		
 
-	move_loop:
+
 		Move bestMove = Move::NO_MOVE;
 		Movelist moves;
 		Movelist seenQuiets;
@@ -265,7 +264,8 @@ namespace Search {
 		for (auto &move : moves){
 			move.setScore(scoreMove(move, ttEntry->move, ss, thread));
 		}
-		bestMove = moves[0];
+		if (root)
+			bestMove = moves[0]; // Guaruntee some random move
 		// Other vars
 		bool skipQuiets = false;
 		for (int m_ = 0;m_<moves.size();m_++){
@@ -292,7 +292,7 @@ namespace Search {
 
 			if (!root && bestScore > GETTING_MATED){
 				// Late Move Pruning
-				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (improving + 1))
+				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (2 - improving))
 					break;
 
 				// History Pruning
@@ -408,8 +408,15 @@ namespace Search {
 		if (!moveCount)
 			return inCheck ? -MATE + ply : 0;
 
-		if (moveIsNull(ss->excluded))
+		if (moveIsNull(ss->excluded)){
+			// Update correction history
+			bool isBestQuiet = thread.board.at<PieceType>(bestMove.to()) == PieceType::NONE || bestMove.typeOf() == Move::ENPASSANT;
+			// if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
+			// 	&& !(ttFlag == TTFlag::BETA_CUT && ss->staticEval >= bestScore) 
+			// 	&& !(ttFlag == TTFlag::FAIL_LOW && ss->staticEval <= bestScore))
+			// 	thread.updateCorrhist(thread.board, bestScore - eval);
 			*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
+		}
 		return bestScore;
 
 	}

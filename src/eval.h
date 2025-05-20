@@ -5,6 +5,7 @@
 #include <string.h>
 #include "external/chess.hpp"
 #include "search.h"
+#include "parameters.h"
 
 using namespace chess;
 constexpr int INFINITE = std::numeric_limits<int>::max();

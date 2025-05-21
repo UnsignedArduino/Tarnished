@@ -98,7 +98,7 @@ namespace Search {
 			return ttEntry->score;
 		}
 
-		int score = network.inference(&thread.board, &thread.accumulator);
+		int score = network.inference(&thread.board, thread.accumulator);
 		if (ply >= MAX_PLY)
 			return score;
 		// if (isPV)
@@ -198,7 +198,7 @@ namespace Search {
 		bool inCheck = thread.board.inCheck();
 
 		if (!inCheck){
-			ss->staticEval = network.inference(&thread.board, &thread.accumulator);;
+			ss->staticEval = network.inference(&thread.board, thread.accumulator);;
 		}
 		else {
 			ss->staticEval = -INFINITE;
@@ -409,12 +409,6 @@ namespace Search {
 			return inCheck ? -MATE + ply : 0;
 
 		if (moveIsNull(ss->excluded)){
-			// Update correction history
-			bool isBestQuiet = thread.board.at<PieceType>(bestMove.to()) == PieceType::NONE || bestMove.typeOf() == Move::ENPASSANT;
-			// if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
-			// 	&& !(ttFlag == TTFlag::BETA_CUT && ss->staticEval >= bestScore) 
-			// 	&& !(ttFlag == TTFlag::FAIL_LOW && ss->staticEval <= bestScore))
-			// 	thread.updateCorrhist(thread.board, bestScore - eval);
 			*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
 		}
 		return bestScore;

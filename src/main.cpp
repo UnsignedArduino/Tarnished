@@ -139,7 +139,7 @@ void UCIInfo(){
 void UCIEvaluate(Board &board){
     Accumulator a;
     a.refresh(board);
-    std::cout << network.inference(&board, &a) << std::endl;
+    std::cout << network.inference(&board, a) << std::endl;
 }
 
 void UCIGo(Searcher &searcher, Board &board, char *str){

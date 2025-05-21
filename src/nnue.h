@@ -41,8 +41,18 @@ inline IntType readLittleEndian(std::istream& stream) {
 }
 
 struct Accumulator {
-	std::array<int16_t, HL_N> white;
-	std::array<int16_t, HL_N> black;
+	#if defined(__x86_64__) || defined(__amd64__) || (defined(_WIN64) && (defined(_M_X64) || defined(_M_AMD64)))
+    	#if defined(__AVX512F__)
+			alignas(64) std::array<int16_t, HL_N> white;
+			alignas(64) std::array<int16_t, HL_N> black;
+		#else
+			alignas(32) std::array<int16_t, HL_N> white;
+			alignas(32) std::array<int16_t, HL_N> black;
+		#endif
+	#else
+		std::array<int16_t, HL_N> white;
+		std::array<int16_t, HL_N> black;
+	#endif
 
 	void refresh(Board &board);
 	void print();

@@ -36,7 +36,7 @@ constexpr int BishopValue = 825;
 constexpr int RookValue   = 1276;
 constexpr int QueenValue  = 2538;
 
-constexpr int PieceValue[] = {PawnValue, KnightValue, BishopValue, RookValue, QueenValue, 0};
+inline std::array<int, 7> PieceValue = {PawnValue, KnightValue, BishopValue, RookValue, QueenValue, 0};
 
 template<typename T, typename U>
 inline void deepFill(T& dest, const U& val) {

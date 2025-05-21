@@ -5,9 +5,6 @@
 // History
 constexpr int16_t MAX_HISTORY = 16383;
 const int16_t DEFAULT_HISTORY = 0;
-constexpr int PAWN_CORR_HIST_ENTRIES = 16384;
-constexpr int CORR_HIST_SCALE = 512;
-constexpr int PAWN_CORR_WEIGHT = 350;
 // NNUE Parameters
 constexpr int16_t HL_N = 512;
 constexpr int16_t QA = 255;
